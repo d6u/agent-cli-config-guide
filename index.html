@@ -387,33 +387,39 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude/CLAUDE.md', '{{CLAUDE_MANAGED}}CLAUDE.md (Managed)'],
-              detail: 'Identical across CLI & Desktop Code tab as your personal coding baseline across all repos.',
+              paths: ['{{CLAUDE_MANAGED}}CLAUDE.md (Managed Policy)', '~/.claude/CLAUDE.md (User)'],
+              multiRule: 'APPENDS (Managed 1st, then User — Managed cannot be excluded)',
+              detail: 'Managed CLAUDE.md does NOT silence User or Project files—it stacks first as an org-wide baseline and cannot be skipped via claudeMdExcludes. User ~/.claude/CLAUDE.md appends after it.',
               extraInfo: 'Desktop Chat/Cowork tabs (non-coding workflows) do not auto-load CLAUDE.md.'
             },
             codex: {
               paths: ['~/.codex/AGENTS.override.md (if present)', '~/.codex/AGENTS.md (fallback)'],
-              detail: 'Identical in CLI & Desktop App. If AGENTS.override.md exists in ~/.codex/, it replaces ~/.codex/AGENTS.md.{{WSL_HINT}}'
+              multiRule: 'OVERRIDES (at most 1 file wins per dir)',
+              detail: 'Identical in CLI & Desktop App. If AGENTS.override.md exists in ~/.codex/, it completely replaces ~/.codex/AGENTS.md.{{WSL_HINT}}'
             },
             agy: {
               paths: ['~/.gemini/{AGENTS,GEMINI}.md', '~/.gemini/config/{AGENTS,GEMINI}.md', '~/.gemini/config/rules/*.md (YAML trigger required)'],
-              detail: 'Shared by App & CLI. Standalone AGENTS/GEMINI.md are always_on; rules/*.md MUST include YAML trigger.'
+              multiRule: 'APPENDS ALL (deduplicated union — never overwrites)',
+              detail: 'Shared by App & CLI. Every AGENTS.md, GEMINI.md, and valid rules/*.md file combines into context (rules/*.md MUST include YAML trigger).'
             }
           },
           {
             scope: 'project',
             label: 'Project / Root',
             claude: {
-              paths: ['<repo>/CLAUDE.md or .claude/CLAUDE.md', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/.claude/rules/*.md'],
-              detail: 'Identical in CLI & Desktop Code tab. Loaded eagerly at session start; supports @path imports.'
+              paths: ['<repo>/CLAUDE.md OR <repo>/.claude/CLAUDE.md', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/.claude/rules/*.md'],
+              multiRule: 'PICK 1 ROOT + APPEND (CLAUDE.local.md & rules/*.md stack on top)',
+              detail: 'Root CLAUDE.md and .claude/CLAUDE.md are equivalent alternatives (pick one). CLAUDE.local.md and .claude/rules/*.md append after the root file at startup.'
             },
             codex: {
               paths: ['<repo>/AGENTS.override.md', '<repo>/AGENTS.md', 'project_doc_fallback_filenames (config.toml)'],
-              detail: 'Identical in CLI & Desktop App. Loaded at startup after global instructions.'
+              multiRule: 'OVERRIDES AT ROOT (1st match wins; appends after Global)',
+              detail: 'Picks at most 1 file at repo root in order: AGENTS.override.md > AGENTS.md > fallback filenames, then appends it after Global ~/.codex/.'
             },
             agy: {
               paths: ['<repo>/{AGENTS,GEMINI}.md', '<repo>/.agents/{AGENTS,GEMINI}.md', '<repo>/.agents/rules/*.md & rules.json'],
-              detail: 'Shared by App & CLI. Supports @[label](path) inlining and @filename canonical path resolution.',
+              multiRule: 'APPENDS ALL (rules.json adds to 1-level scan)',
+              detail: 'All found files combine (never overwrite). rules.json appends nested/external rule files. Supports @[label](path) inlining.',
               appDelta: 'App supports trigger: manual via @-mentions in chat; Antigravity CLI does not support manual rule mentions.'
             }
           },
@@ -422,14 +428,17 @@
             label: 'Subdirectory / CWD',
             claude: {
               paths: ['Ancestors up to CWD: Eager at startup', 'Child subdirs (<subdir>/CLAUDE.md): Lazy ON DEMAND'],
-              detail: 'Identical in CLI & Desktop Code tab. Subdir CLAUDE.md below CWD uses 0 tokens until accessed.'
+              multiRule: 'APPENDS ALL (Eager ancestors + Lazy child subdirs)',
+              detail: 'Identical in CLI & Desktop Code tab. All ancestor files append at startup; child subdir CLAUDE.md appends dynamically only when a file inside it is read/edited.'
             },
             codex: {
               paths: ['Every dir from <repo-root> down to <cwd>: AGENTS.override.md or AGENTS.md'],
-              detail: 'Identical in CLI & Desktop App. Walks DOWN from repo root to CWD (max 1 file/dir); ignores below CWD.'
+              multiRule: 'OVERRIDES IN DIR, APPENDS ACROSS DIRS (up to 32 KiB)',
+              detail: 'Walks DOWN from repo root to CWD: AGENTS.override.md overrides AGENTS.md within the same dir, while parent -> child winners append.'
             },
             agy: {
               paths: ['Every dir walking UP from workspace folder to <repo-root>: AGENTS.md, GEMINI.md, .agents/rules/*.md'],
+              multiRule: 'APPENDS ALL (deduplicated upward walk)',
               detail: 'Identical walk rule in App & CLI (walks UP to repo root; never loads below workspace folder).',
               extraInfo: 'Workspace root = folders added to a Project in App, or launch CWD + --add-dir / /add-dir in CLI.'
             }
@@ -438,19 +447,19 @@
             scope: 'resolution',
             label: 'Append / Overwrite',
             claude: {
-              badge: 'Cumulative Append (Eager Ancestors + Lazy Subdirs)',
-              paths: ['Global -> Root/Ancestors -> CLAUDE.local.md -> Lazy Subdir'],
-              detail: 'Identical in CLI & Desktop Code tab. More specific files appear later; oversized lazy files truncate with a Read hint.'
+              badge: 'Cumulative Append (Managed -> User -> Project -> Local -> Lazy Subdir)',
+              paths: ['1. Managed ({{CLAUDE_MANAGED}}CLAUDE.md — non-excludable)', '2. User (~/.claude/CLAUDE.md)', '3. Project/Ancestors (CLAUDE.md + .claude/rules/*.md)', '4. Local (CLAUDE.local.md) + Lazy Subdir CLAUDE.md'],
+              detail: 'All layers concatenate rather than deleting each other. More specific files load later (stronger local prompt weight), while Managed CLAUDE.md always remains injected and cannot be excluded via claudeMdExcludes.'
             },
             codex: {
-              badge: 'Top-Down Concat + Same-Level Override + 32 KiB Cap',
-              paths: ['~/.codex/ -> <repo>/ -> ... -> <cwd>/ (AGENTS.override.md beats AGENTS.md)'],
-              detail: 'Identical in CLI & Desktop App. Stops silently at project_doc_max_bytes (default 32 KiB).'
+              badge: 'Top-Down Append + Same-Level Override + 32 KiB Cap',
+              paths: ['~/.codex/ -> <repo>/ -> ... -> <cwd>/ (AGENTS.override.md replaces AGENTS.md in same dir)'],
+              detail: 'Identical in CLI & Desktop App. Appends with blank lines until project_doc_max_bytes (32 KiB default), then silently stops.'
             },
             agy: {
               badge: 'Cumulative Union + 24 KB/file + 20k Token Demotion',
               paths: ['Global + Repo-to-Workspace AGENTS/GEMINI.md + .agents/rules/*.md (Deduplicated)'],
-              detail: 'Identical in App & CLI. Never overwrites; excess >20k tokens demotes largest rules to pointers.'
+              detail: 'Identical in App & CLI. Never overwrites; excess >20k tokens demotes largest rules to path+description pointers.'
             }
           }
         ]
@@ -464,8 +473,9 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude.json (top-level "mcpServers")', '{{CLAUDE_MANAGED}}managed-mcp.json (Enterprise)'],
-              detail: 'Identical across CLI & Desktop Code tab for user-scoped personal coding MCP servers.',
+              paths: ['{{CLAUDE_MANAGED}}managed-mcp.json (Enterprise)', '~/.claude.json (top-level "mcpServers")'],
+              multiRule: 'UNION + OVERRIDE (Managed replaces User on same server name)',
+              detail: 'Distinct server names combine. If both define the same server key, Managed replaces the entire User block (no field deep-merge).',
               extraInfo: 'Desktop Chat/Cowork tabs use a separate config file: {{CLAUDE_DESKTOP_MCP}}.'
             },
             codex: {
@@ -474,7 +484,8 @@
             },
             agy: {
               paths: ['~/.gemini/config/mcp_config.json ("mcpServers")', '~/.gemini/config/plugins/<name>/mcp_config.json'],
-              detail: 'Identical config schema & files across Antigravity App, IDE, and CLI (stdio + Streamable HTTP).',
+              multiRule: 'UNION (Appends; plugin tools auto-namespaced)',
+              detail: 'Both combine into the active MCP tool pool. Plugin servers are namespaced so they do not overwrite user servers.',
               extraInfo: 'App adds interactive MCP Apps (ui:// HTML views) & GUI Customizations > MCP Servers; CLI runs the same tools as plain text via /mcp.'
             }
           },
@@ -482,16 +493,18 @@
             scope: 'project',
             label: 'Project / Root',
             claude: {
-              paths: ['<repo>/.mcp.json (Team / Committed)', '~/.claude.json under project path (Local / Private)'],
-              detail: 'Identical in CLI & Desktop Code tab. Shared .mcp.json supports ${VAR} expansion; Local stays private.'
+              paths: ['~/.claude.json under project path (Local / Private)', '<repo>/.mcp.json (Project / Team Committed)'],
+              multiRule: 'UNION + OVERRIDE (Local replaces Project on same server name)',
+              detail: 'Distinct servers combine. On identical server name, private Local (~/.claude.json) completely replaces the .mcp.json entry (no env/args merging).'
             },
             codex: {
               paths: ['<repo>/.codex/config.toml ([mcp_servers.<name>])'],
-              detail: 'Identical in CLI & Desktop App. Loads ONLY in trusted repos (approved via CLI or Desktop Agent Security UI).'
+              detail: 'Identical in CLI & Desktop App. Appends new servers to Global; matching [mcp_servers.<name>] replaces the entire Global table (trusted repos only).'
             },
             agy: {
               paths: ['<repo>/.agents/mcp_config.json', '<repo>/.agents/plugins/<name>/mcp_config.json'],
-              detail: 'Identical in App & CLI. Supports enabledTools, disabledTools, tools.<name>.eager, and timeoutSeconds.'
+              multiRule: 'UNION (Appends; Workspace overrides Global on same key)',
+              detail: 'Both combine; plugin servers are namespaced. Supports enabledTools, disabledTools, tools.<name>.eager, and timeoutSeconds.'
             }
           },
           {
@@ -503,11 +516,11 @@
             },
             codex: {
               paths: ['Closest / nested <dir>/.codex/config.toml (Trusted projects only)'],
-              detail: 'Identical in CLI & Desktop App. Nested .codex/config.toml closer to CWD beats repo root.'
+              detail: 'Identical in CLI & Desktop App. Nested .codex/config.toml closer to CWD appends new servers and replaces matching repo-root server tables.'
             },
             agy: {
               paths: ['<workspace-up-to-repo-root>/.agents/mcp_config.json'],
-              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; never scans below workspace.'
+              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; closer workspace entries override broader ones on matching key.'
             }
           },
           {
@@ -516,12 +529,12 @@
             claude: {
               badge: 'Union by Name | Collision = Full Block Replace (No Deep-Merge)',
               paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins'],
-              detail: 'Identical in CLI & Desktop Code tab. Duplicate server key replaces the entire block (no env/args merging).'
+              detail: 'Identical in CLI & Desktop Code tab. Distinct names combine; duplicate server key replaces the entire block (no env/args merging).'
             },
             codex: {
               badge: 'Union by Name | Collision = Full Table Replace',
               paths: ['1. CLI Flags (-c)', '2. Nested .codex/config.toml', '3. Repo Root .codex/config.toml', '4. User ~/.codex/config.toml'],
-              detail: 'Identical in CLI & Desktop App (minus CLI-only -c flags in GUI). Matching server name replaces entire table.'
+              detail: 'Identical in CLI & Desktop App (minus CLI-only -c flags in GUI). Unique tables append; matching server name replaces entire table.'
             },
             agy: {
               badge: 'Union by Name | Workspace Overrides Global | Plugins Namespaced',
@@ -541,15 +554,18 @@
             label: 'Global / User',
             claude: {
               paths: ['~/.claude/skills/<name>/SKILL.md', '~/.claude/commands/<name>.md (Legacy)'],
-              detail: 'Identical in CLI & Desktop Code tab. Also syncs Claude.ai skills when syncClaudeAiSkills is enabled.'
+              multiRule: 'UNION + OVERRIDE (skills/ overrides commands/ on same name)',
+              detail: 'Both combine into available slash commands; if a skill and legacy command share the same name, skills/<name>/SKILL.md wins.'
             },
             codex: {
-              paths: ['~/.agents/skills/<name>/SKILL.md', '~/.codex/skills/<name>/SKILL.md', '~/.codex/prompts/<name>.md', '{{CODEX_ADMIN_SKILLS}} (Admin)'],
-              detail: 'Identical in CLI & Desktop App. Both read ~/.agents/skills/ and ~/.codex/skills/.{{WSL_HINT}}'
+              paths: ['~/.codex/skills/<name>/SKILL.md (Native User)', '~/.agents/skills/<name>/SKILL.md (Cross-agent)', '~/.codex/prompts/<name>.md', '{{CODEX_ADMIN_SKILLS}} (Admin)'],
+              multiRule: 'UNION + OVERRIDE (User overrides Admin on same name)',
+              detail: 'Distinct skills combine into one pool; User skills shadow Admin skills on duplicate names. Note: ~/.codex/skills/ is Codex native home.{{WSL_HINT}}'
             },
             agy: {
-              paths: ['~/.gemini/config/skills/<name>/SKILL.md (App + CLI Personal)', '~/.gemini/antigravity-cli/skills/ (CLI ONLY)', '~/.gemini/skills/ (CLI ONLY)'],
-              detail: 'Put personal skills in ~/.gemini/config/skills/ to share them between Antigravity App and CLI.',
+              paths: ['~/.gemini/antigravity-cli/skills/ (CLI ONLY)', '~/.gemini/skills/ (CLI ONLY)', '~/.gemini/config/skills/<name>/SKILL.md (App + CLI)'],
+              multiRule: 'UNION + OVERRIDE (CLI-Exclusive overrides Global Config & Workspace)',
+              detail: 'Distinct skills combine. Put personal skills in ~/.gemini/config/skills/ to share them between Antigravity App and CLI.',
               appDelta: 'Desktop App does NOT read ~/.gemini/antigravity-cli/skills/ or ~/.gemini/skills/ (CLI-exclusive). App auto-refreshes lists; CLI uses /skills reload.'
             }
           },
@@ -558,15 +574,17 @@
             label: 'Project / Root',
             claude: {
               paths: ['<repo>/.claude/skills/<name>/SKILL.md', '<repo>/.claude/commands/<name>.md'],
-              detail: 'Identical in CLI & Desktop Code tab. Checked into git for shared team workflows.'
+              multiRule: 'UNION + OVERRIDE (skills/ overrides commands/ on same name)',
+              detail: 'Identical in CLI & Desktop Code tab. Both combine and are checked into git for team workflows.'
             },
             codex: {
               paths: ['<repo>/.agents/skills/<name>/SKILL.md'],
-              detail: 'Identical in CLI & Desktop App. Shared via version control.'
+              detail: 'Identical in CLI & Desktop App. Appends to global pool and overrides User/Admin skills on matching name.'
             },
             agy: {
-              paths: ['<repo>/.agents/skills/<name>/SKILL.md', 'people/<user>/.agents/skills/ (via .gemini/config.json, uses {{USER_VAR}})', 'Paths in <repo>/.agents/skills.json'],
-              detail: 'Identical in App & CLI. Scanned 1 level deep unless deeper paths are listed in skills.json.'
+              paths: ['people/<user>/.agents/skills/ (via .gemini/config.json, uses {{USER_VAR}})', '<repo>/.agents/skills/<name>/SKILL.md', 'Paths in <repo>/.agents/skills.json'],
+              multiRule: 'APPEND + OVERRIDE (skills.json appends; people/<user> overrides repo)',
+              detail: 'skills.json appends extra/nested folders to the 1-level .agents/skills/ scan; people/<user> overrides repo skills on name clash.'
             }
           },
           {
@@ -574,15 +592,15 @@
             label: 'Subdirectory / CWD',
             claude: {
               paths: ['<subdir>/.claude/skills/<name>/SKILL.md (Monorepo discovery)'],
-              detail: 'Identical in CLI & Desktop Code tab.'
+              detail: 'Identical in CLI & Desktop Code tab. Combines with project/global skills.'
             },
             codex: {
               paths: ['<cwd-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
-              detail: 'Identical in CLI & Desktop App. Scans upward from working folder to repo root.'
+              detail: 'Identical in CLI & Desktop App. Scans upward to repo root; closer CWD skill wins name clashes.'
             },
             agy: {
               paths: ['<workspace-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
-              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; never scans below workspace.'
+              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; closer folder wins name clashes.'
             }
           },
           {
@@ -591,17 +609,17 @@
             claude: {
               badge: 'Union Pool | Project Shadows Global',
               paths: ['1. Project (.claude/skills/)', '2. Global (~/.claude/skills/)', '3. Plugin Skills (namespaced)'],
-              detail: 'Identical in CLI & Desktop Code tab. Project overrides Global on identical skill name.'
+              detail: 'Identical in CLI & Desktop Code tab. Distinct names combine; Project overrides Global on identical skill name.'
             },
             codex: {
               badge: 'Union Pool | Repo > User > Admin > System',
-              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.agents & ~/.codex)', '3. Admin ({{CODEX_ADMIN_SKILLS}})', '4. System'],
-              detail: 'Identical in CLI & Desktop App. Repo-local wins name collisions.'
+              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.codex/skills & ~/.agents/skills)', '3. Admin ({{CODEX_ADMIN_SKILLS}})', '4. System'],
+              detail: 'Identical in CLI & Desktop App. Distinct skills combine; repo-local wins name collisions.'
             },
             agy: {
               badge: 'Personal-in-Repo > Workspace > Global Config > Built-in',
               paths: ['(CLI #1) ~/.gemini/antigravity-cli/skills/ & ~/.gemini/skills/', '1. Personal Repo (people/{user}/.agents/skills/)', '2. Workspace (.agents/skills/ & skills.json)', '3. Personal Global (~/.gemini/config/skills/)', '4. Built-in (Plugins: <plugin>:<skill>)'],
-              detail: 'Plugin skills are namespaced as <plugin>:<skill> and never collide.',
+              detail: 'Distinct skills combine; plugin skills are namespaced as <plugin>:<skill> and never collide.',
               appDelta: 'In CLI only, ~/.gemini/antigravity-cli/skills/ & ~/.gemini/skills/ sit above #1 (beating workspace skills & ignoring manifest exclude lists).'
             }
           }
@@ -616,18 +634,21 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude/settings.json', '{{CLAUDE_MANAGED}}managed-settings.json (Enterprise)'],
-              detail: 'Identical across CLI & Desktop Code tab for default model, permissions, hooks, and env vars.',
+              paths: ['{{CLAUDE_MANAGED}}managed-settings.json (Enterprise)', '~/.claude/settings.json (User)'],
+              multiRule: 'OVERRIDES (Managed strictly overrides User — non-overridable)',
+              detail: 'Managed policy enforces locked enterprise keys that User, Project, Local, and CLI flags cannot override.',
               extraInfo: 'Non-coding Desktop App preferences (window, appearance, Chat/Cowork/Routines toggles) are managed in Desktop UI settings.'
             },
             codex: {
-              paths: ['~/.codex/config.toml ({{CODEX_HOME_VAR}}/config.toml)', '~/.codex/<profile>.config.toml'],
-              detail: 'Identical across CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.{{WSL_HINT}}',
+              paths: ['~/.codex/<profile>.config.toml (--profile <name>)', '~/.codex/config.toml ({{CODEX_HOME_VAR}}/config.toml)'],
+              multiRule: 'OVERRIDES BY KEY (Profile overrides base config.toml)',
+              detail: 'When --profile is passed, profile keys override matching keys in base config.toml; unset keys inherit from base.{{WSL_HINT}}',
               extraInfo: 'Desktop App layers multi-thread orchestration, worktree switching, automations, and Agent Security UI on top of shared config.toml.'
             },
             agy: {
               paths: ['CLI: ~/.gemini/antigravity-cli/settings.json (Sparse JSON)', 'App: Settings UI ({{SETTINGS_KEY}}) Global Preferences', 'Shared: ~/.gemini/config/hooks.json & *.json manifests'],
-              detail: 'Hooks & discovery manifests ({skills,rules,agents,plugins}.json) are shared across both surfaces.',
+              multiRule: 'SEPARATE DOMAINS (Manifests append; CLI JSON & App UI are separate)',
+              detail: 'Hooks & discovery manifests ({skills,rules,agents,plugins}.json) are shared and additive across both surfaces.',
               appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo) & models in App UI ({{SETTINGS_KEY}}).',
               extraInfo: 'App UI also configures Desktop-only features: Interface Layout (Software Engineering vs Knowledge Work), Browser actuation, and Orchestrator/Executor model split.'
             }
@@ -636,15 +657,17 @@
             scope: 'project',
             label: 'Project / Root',
             claude: {
-              paths: ['<repo>/.claude/settings.json (Team / VCS)', '<repo>/.claude/settings.local.json (Personal / Gitignored)'],
-              detail: 'Identical in CLI & Desktop Code tab. Splits shared team policies from gitignored local overrides.'
+              paths: ['<repo>/.claude/settings.local.json (Personal / Gitignored)', '<repo>/.claude/settings.json (Team / VCS)'],
+              multiRule: 'OVERRIDES (Local > Shared: scalars/arrays replace, objects deep-merge)',
+              detail: 'Identical in CLI & Desktop Code tab. Local overrides Shared team settings—and remember arrays like permissions.allow replace completely.'
             },
             codex: {
               paths: ['<repo>/.codex/config.toml (Trusted repos only)'],
-              detail: 'Identical in CLI & Desktop App once the repo is marked trusted.'
+              detail: 'Identical in CLI & Desktop App. Overrides matching Global/Profile keys once the repo is marked trusted.'
             },
             agy: {
               paths: ['Shared: <repo>/.agents/hooks.json & *.json manifests', 'Shared: <repo>/.gemini/config.json (personal_customization_dir, uses {{USER_VAR}})', 'App: Per-Project Settings UI (Folders, Worktrees, Preset override)'],
+              multiRule: 'SEPARATE DOMAINS (Manifests append; App Project UI overrides Global UI)',
               detail: 'Repo hooks, manifests, and personal_customization_dir work identically in App & CLI.',
               appDelta: 'App supports isolated Per-Project settings in UI (Inherit Global vs project Permission Preset override, Local vs Git Worktree mode); CLI stores trustedWorkspaces in its global settings.json.'
             }
@@ -658,11 +681,11 @@
             },
             codex: {
               paths: ['Nested <dir>/.codex/config.toml (Trusted repos only)'],
-              detail: 'Identical in CLI & Desktop App for trusted nested directories.'
+              detail: 'Identical in CLI & Desktop App. Overrides matching keys from repo root .codex/config.toml.'
             },
             agy: {
               paths: ['<workspace-up-to-repo-root>/.agents/{skills,rules,agents,plugins}.json'],
-              detail: 'Identical in App & CLI. Manifests are honored in every .agents/ folder walking UP to repo root.'
+              detail: 'Identical in App & CLI. Manifests in every .agents/ folder walking UP to repo root append cumulatively.'
             }
           },
           {
@@ -971,6 +994,9 @@
       const pathsHtml = data.paths.map(p =>
         `<li class="text-[11px] sm:text-xs font-mono text-[var(--code-foreground)] bg-[var(--card)] px-2 py-1 rounded border border-[var(--card-border)] path-chip">${escLoc(p)}</li>`
       ).join('');
+      const multiRuleHtml = data.multiRule
+        ? `<div class="px-2 py-1 rounded bg-[var(--secondary)] border border-[var(--card-border)] text-[10px] sm:text-[11px] font-mono font-semibold text-[var(--foreground)] leading-snug path-chip">${escLoc(data.multiRule)}</div>`
+        : '';
       const deltaHtml = data.appDelta
         ? `<div class="mt-2 p-2 rounded-md border border-dashed border-[var(--border)] bg-[var(--card)] text-[11px] leading-snug text-[var(--foreground)]"><span class="font-mono font-bold uppercase text-[10px] mr-1">App ≠ CLI:</span>${escLoc(data.appDelta)}</div>`
         : '';
@@ -981,6 +1007,7 @@
         <div class="space-y-1.5 min-w-0">
           ${badgeHtml}
           <ul class="space-y-1">${pathsHtml}</ul>
+          ${multiRuleHtml}
           <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${escLoc(data.detail)}</p>
           ${deltaHtml}
           ${extraHtml}
@@ -1082,14 +1109,15 @@
       if (activeSimScenario === 'instructions') {
         const simData = {
           claude: {
-            title: 'Claude Code CLI — Launch CWD: /repo/services/api',
-            ruleSummary: 'Appends Global + Root + Ancestors eagerly at startup. Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
+            title: 'Claude Code — Launch CWD: /repo/services/api',
+            ruleSummary: 'Stacks (appends) Managed -> User -> Root/Ancestors -> Local eagerly at startup. Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
             files: [
-              { path: '~/.claude/CLAUDE.md', status: 'STARTUP (1st)', badge: 'Eager Append', desc: 'Global personal baseline loaded first.' },
-              { path: '/repo/CLAUDE.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global.' },
-              { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'CWD instructions refine broader rules.' },
-              { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (4th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after CWD CLAUDE.md.' },
-              { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Injected dynamically ONLY when Claude reads/edits a file under src/db/.' }
+              { path: '{{CLAUDE_MANAGED}}CLAUDE.md', status: 'STARTUP (1st)', badge: 'Managed / Non-Excludable', desc: 'Org-wide baseline stacked first; cannot be skipped via claudeMdExcludes (appends, does not silence User/Project files).' },
+              { path: '~/.claude/CLAUDE.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Global personal baseline appended after Managed policy.' },
+              { path: '/repo/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global (or .claude/CLAUDE.md — pick one).' },
+              { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (4th)', badge: 'Eager Append', desc: 'CWD instructions append and refine broader rules.' },
+              { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (5th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after CWD CLAUDE.md.' },
+              { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Appended dynamically ONLY when Claude reads/edits a file under src/db/.' }
             ]
           },
           codex: {
@@ -1367,8 +1395,8 @@
           bin: 'claude',
           items: [
             {
-              heading: '1. Subdir CLAUDE.md is Lazy-Loaded',
-              body: `Root &amp; ancestor <code class="text-[var(--code-foreground)]">CLAUDE.md</code> load eagerly in CLI &amp; Desktop Code tab. Child <code class="text-[var(--code-foreground)]">${escLoc('pkg/CLAUDE.md')}</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">${escLoc('pkg/')}</code>.`
+              heading: '1. Managed CLAUDE.md Stacks First (Non-Excludable) + Lazy Subdirs',
+              body: `<code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_MANAGED}}CLAUDE.md')}</code> <strong>appends first</strong> (does not silence User/Project files) and cannot be bypassed via <code class="text-[var(--code-foreground)]">claudeMdExcludes</code>. Child <code class="text-[var(--code-foreground)]">${escLoc('pkg/CLAUDE.md')}</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">${escLoc('pkg/')}</code>.`
             },
             {
               heading: '2. MCP Name Clash = Full Replacement',
