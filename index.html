@@ -409,9 +409,9 @@
             scope: 'project',
             label: 'Project / Root',
             claude: {
-              paths: ['<repo>/CLAUDE.md OR <repo>/.claude/CLAUDE.md', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/.claude/rules/*.md'],
-              multiRule: 'PICK 1 ROOT + APPEND (CLAUDE.local.md & rules/*.md stack on top)',
-              detail: 'Root CLAUDE.md and .claude/CLAUDE.md are equivalent alternatives (pick one). CLAUDE.local.md and .claude/rules/*.md append after the root file at startup.'
+              paths: ['<repo>/CLAUDE.md', '<repo>/.claude/CLAUDE.md', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/.claude/rules/*.md'],
+              multiRule: 'APPENDS ALL (CLAUDE.md -> .claude/CLAUDE.md -> CLAUDE.local.md -> rules/*.md)',
+              detail: 'All present files load and append sequentially at startup—both <repo>/CLAUDE.md and <repo>/.claude/CLAUDE.md are loaded if both exist. Inspect exact loaded order via /memory.'
             },
             codex: {
               paths: ['<repo>/AGENTS.override.md', '<repo>/AGENTS.md', 'project_doc_fallback_filenames (config.toml)'],
@@ -449,9 +449,9 @@
             scope: 'resolution',
             label: 'Append / Overwrite',
             claude: {
-              badge: 'Cumulative Append (Managed -> User -> Project -> Local -> Lazy Subdir)',
-              paths: ['1. Managed ({{CLAUDE_MANAGED}}CLAUDE.md — non-excludable)', '2. User (~/.claude/CLAUDE.md)', '3. Project/Ancestors (CLAUDE.md + .claude/rules/*.md)', '4. Local (CLAUDE.local.md) + Lazy Subdir CLAUDE.md'],
-              detail: 'All layers concatenate rather than deleting each other. More specific files load later (stronger local prompt weight), while Managed CLAUDE.md always remains injected and cannot be excluded via claudeMdExcludes.'
+              badge: 'Cumulative Append (Managed -> User -> Root -> .claude/ -> Local -> Lazy Subdir)',
+              paths: ['1. Managed ({{CLAUDE_MANAGED}}CLAUDE.md — non-excludable)', '2. User (~/.claude/CLAUDE.md)', '3. Project (<repo>/CLAUDE.md -> <repo>/.claude/CLAUDE.md)', '4. Local (<repo>/CLAUDE.local.md) + .claude/rules/*.md + Lazy Subdir'],
+              detail: 'All layers concatenate rather than deleting each other (verify active stack with /memory). More specific files load later (stronger local prompt weight), while Managed CLAUDE.md always remains injected and cannot be excluded via claudeMdExcludes.'
             },
             codex: {
               badge: 'Top-Down Append + Same-Level Override + 32 KiB Cap',
@@ -1127,13 +1127,14 @@
         const simData = {
           claude: {
             title: 'Claude Code — Launch CWD: /repo/services/api',
-            ruleSummary: 'Stacks (appends) Managed -> User -> Root/Ancestors -> Local eagerly at startup. Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
+            ruleSummary: 'Stacks (appends) Managed -> User -> Root -> .claude/CLAUDE.md -> Local eagerly at startup (check via /memory). Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
             files: [
               { path: '{{CLAUDE_MANAGED}}CLAUDE.md', status: 'STARTUP (1st)', badge: 'Managed / Non-Excludable', desc: 'Org-wide baseline stacked first; cannot be skipped via claudeMdExcludes (appends, does not silence User/Project files).' },
               { path: '~/.claude/CLAUDE.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Global personal baseline appended after Managed policy.' },
-              { path: '/repo/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global (or .claude/CLAUDE.md — pick one).' },
-              { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (4th)', badge: 'Eager Append', desc: 'CWD instructions append and refine broader rules.' },
-              { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (5th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after CWD CLAUDE.md.' },
+              { path: '/repo/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global.' },
+              { path: '/repo/.claude/CLAUDE.md', status: 'STARTUP (4th)', badge: 'Eager Append', desc: 'Also loaded and appended directly after /repo/CLAUDE.md if both exist.' },
+              { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (5th)', badge: 'Eager Append', desc: 'CWD instructions append and refine broader rules.' },
+              { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (6th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after CWD CLAUDE.md.' },
               { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Appended dynamically ONLY when Claude reads/edits a file under src/db/.' }
             ]
           },
