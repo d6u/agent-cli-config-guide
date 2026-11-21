@@ -91,10 +91,16 @@
     <header class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
       <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4 min-w-0">
         <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center justify-between sm:justify-start gap-2 mb-2">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
             <span class="inline-flex items-center text-[10px] sm:text-[11px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">
-              CLI + Desktop App Reference
+              CLI + Desktop App
             </span>
+            <!-- OS Switcher (macOS default) -->
+            <div class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-mono bg-[var(--background)] border border-[var(--card-border)] rounded-md p-0.5" role="group" aria-label="Operating System">
+              <button onclick="setOS('macos')" id="os-btn-macos" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">macOS</button>
+              <button onclick="setOS('windows')" id="os-btn-windows" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Windows</button>
+              <button onclick="setOS('linux')" id="os-btn-linux" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Linux</button>
+            </div>
             <!-- Standalone Browser Theme Switcher (auto-hidden inside Antigravity host) -->
             <div id="standalone-theme-switcher" class="hidden items-center gap-0.5 text-[10px] sm:text-[11px] font-mono bg-[var(--background)] border border-[var(--card-border)] rounded-md p-0.5">
               <button onclick="applyStandaloneTheme('wireframe')" id="theme-btn-wireframe" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors">Wireframe</button>
@@ -284,78 +290,92 @@
 
     <!-- ==================== TAB 4: GOTCHAS & LIMITS ==================== -->
     <section id="tab-gotchas" class="hidden w-full min-w-0 space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-        <!-- Claude Code Gotchas -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
-            <h3 class="text-sm font-bold text-[var(--foreground)]">Claude Code (CLI + Desktop)</h3>
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">claude</span>
-          </div>
-          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">1. Subdir CLAUDE.md is Lazy-Loaded</strong>
-              Root &amp; ancestor <code class="text-[var(--code-foreground)]">CLAUDE.md</code> load eagerly in CLI &amp; Desktop Code tab. Child <code class="text-[var(--code-foreground)]">pkg/CLAUDE.md</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">pkg/</code>.
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">2. MCP Name Clash = Full Replacement</strong>
-              In CLI &amp; Desktop <strong>Code tab</strong>: Local (<code class="text-[var(--code-foreground)]">~/.claude.json</code> project entry) &gt; Project (<code class="text-[var(--code-foreground)]">.mcp.json</code>) &gt; User (<code class="text-[var(--code-foreground)]">~/.claude.json</code>). Same server name replaces the entire block—no deep-merging of <code class="text-[var(--code-foreground)]">env</code> or <code class="text-[var(--code-foreground)]">args</code>. <span class="italic">(Desktop Extra: non-coding Chat/Cowork tabs read <code class="text-[var(--code-foreground)]">claude_desktop_config.json</code> instead.)</span>
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">3. settings.json Arrays Replace, Not Append</strong>
-              Defining <code class="text-[var(--code-foreground)]">permissions.allow</code> in project <code class="text-[var(--code-foreground)]">.claude/settings.json</code> <strong>wipes out</strong> your global allow array instead of appending.
-            </li>
-          </ul>
-        </div>
-
-        <!-- Codex Gotchas -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
-            <h3 class="text-sm font-bold text-[var(--foreground)]">Codex (CLI + Desktop App)</h3>
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">codex</span>
-          </div>
-          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">1. AGENTS.override.md Wins Same Level</strong>
-              Both CLI &amp; Desktop App pick <strong>at most one</strong> doc per directory walking Global &rarr; Root &rarr; CWD. <code class="text-[var(--code-foreground)]">AGENTS.override.md</code> replaces <code class="text-[var(--code-foreground)]">AGENTS.md</code> in that folder.
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">2. Silent 32 KiB Instruction Cap</strong>
-              Combined <code class="text-[var(--code-foreground)]">AGENTS.md</code> chain stops silently at <code class="text-[var(--code-foreground)]">project_doc_max_bytes</code> (32 KiB default) unless raised in shared <code class="text-[var(--code-foreground)]">config.toml</code>.
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">3. Shared Harness &amp; Repo Trust Gate</strong>
-              Changes to <code class="text-[var(--code-foreground)]">~/.codex/config.toml</code>, <code class="text-[var(--code-foreground)]">[mcp_servers.*]</code>, and <code class="text-[var(--code-foreground)]">.agents/skills/</code> apply identically to CLI &amp; Desktop App. Project MCP requires marking the repo trusted.
-            </li>
-          </ul>
-        </div>
-
-        <!-- Antigravity Gotchas -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
-          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
-            <h3 class="text-sm font-bold text-[var(--foreground)]">Antigravity (CLI + Desktop App)</h3>
-            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">agy</span>
-          </div>
-          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">1. Walks UP Only + 24 KB / 20k Token Budget</strong>
-              Both App &amp; CLI walk UP to repo root (never down) and skip <code class="text-[var(--code-foreground)]">rules/*.md</code> missing YAML <code class="text-[var(--code-foreground)]">trigger:</code>. App supports <code class="text-[var(--code-foreground)]">manual</code> <code class="text-[var(--code-foreground)]">@</code>-mentions; CLI does not.
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">2. CLI-Exclusive Skills Are Invisible to App!</strong>
-              <code class="text-[var(--code-foreground)]">~/.gemini/antigravity-cli/skills/</code> and <code class="text-[var(--code-foreground)]">~/.gemini/skills/</code> take #1 priority in CLI, but the <strong>Desktop App doesn't read them</strong>—use <code class="text-[var(--code-foreground)]">~/.gemini/config/skills/</code> for both.
-            </li>
-            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">3. Separate Settings Storage (App UI vs CLI JSON)</strong>
-              CLI stores prefs in <code class="text-[var(--code-foreground)]">~/.gemini/antigravity-cli/settings.json</code>; App stores Global + Per-Project settings (Permission Presets, Layouts, Worktrees) in the App UI (<code class="text-[var(--code-foreground)]">Cmd+,</code>).
-            </li>
-          </ul>
-        </div>
-      </div>
+      <div id="gotchas-container" class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4"></div>
     </section>
 
   </div>
 
   <script>
+    // ==================== OS PROFILES ====================
+    const OS_PROFILES = {
+      macos: {
+        label: 'macOS',
+        claudeManaged: '/Library/Application Support/ClaudeCode/',
+        claudeManagedDir: '/Library/Application Support/ClaudeCode',
+        claudeDesktopMcp: '~/Library/Application Support/Claude/claude_desktop_config.json',
+        codexAdminSkills: '/etc/codex/skills/',
+        codexHomeVar: '$CODEX_HOME',
+        settingsKey: 'Cmd+,',
+        userVar: 'USER',
+        repoRoot: '/repo',
+        repoCwd: '/repo/services/api',
+        teamShared: '/team/shared-skills',
+        sampleDocs: '/Users/me/docs',
+        wslHint: ''
+      },
+      windows: {
+        label: 'Windows',
+        claudeManaged: 'C:\\Program Files\\ClaudeCode\\',
+        claudeManagedDir: 'C:\\Program Files\\ClaudeCode',
+        claudeDesktopMcp: '%APPDATA%\\Claude\\claude_desktop_config.json',
+        codexAdminSkills: 'C:\\ProgramData\\codex\\skills\\',
+        codexHomeVar: '%CODEX_HOME%',
+        settingsKey: 'Ctrl+,',
+        userVar: 'USERNAME',
+        repoRoot: 'C:\\repo',
+        repoCwd: 'C:\\repo\\services\\api',
+        teamShared: 'C:\\team\\shared-skills',
+        sampleDocs: 'C:\\Users\\me\\docs',
+        wslHint: ' (WSL2 uses Linux ~/.codex/ paths.)'
+      },
+      linux: {
+        label: 'Linux',
+        claudeManaged: '/etc/claude-code/',
+        claudeManagedDir: '/etc/claude-code',
+        claudeDesktopMcp: '~/.config/Claude/claude_desktop_config.json (XDG / unofficial)',
+        codexAdminSkills: '/etc/codex/skills/',
+        codexHomeVar: '$CODEX_HOME',
+        settingsKey: 'Ctrl+,',
+        userVar: 'USER',
+        repoRoot: '/repo',
+        repoCwd: '/repo/services/api',
+        teamShared: '/team/shared-skills',
+        sampleDocs: '/home/me/docs',
+        wslHint: ''
+      }
+    };
+
+    function loc(str) {
+      const p = OS_PROFILES[activeOS] || OS_PROFILES.macos;
+      let out = String(str)
+        .replace(/\{\{CLAUDE_MANAGED\}\}/g, p.claudeManaged)
+        .replace(/\{\{CLAUDE_MANAGED_DIR\}\}/g, p.claudeManagedDir)
+        .replace(/\{\{CLAUDE_DESKTOP_MCP\}\}/g, p.claudeDesktopMcp)
+        .replace(/\{\{CODEX_ADMIN_SKILLS\}\}/g, p.codexAdminSkills)
+        .replace(/\{\{CODEX_HOME_VAR\}\}/g, p.codexHomeVar)
+        .replace(/\{\{SETTINGS_KEY\}\}/g, p.settingsKey)
+        .replace(/\{\{USER_VAR\}\}/g, p.userVar)
+        .replace(/\{\{REPO_ROOT\}\}/g, p.repoRoot)
+        .replace(/\{\{REPO_CWD\}\}/g, p.repoCwd)
+        .replace(/\{\{TEAM_SHARED\}\}/g, p.teamShared)
+        .replace(/\{\{SAMPLE_DOCS\}\}/g, p.sampleDocs);
+
+      if (activeOS === 'windows') {
+        // Convert ~/... home paths to %USERPROFILE%\...
+        out = out.replace(/~\/[^\s),;"'`]*/g, m => '%USERPROFILE%\\' + m.slice(2).replace(/\//g, '\\'));
+        // Convert /repo/... sample paths to C:\repo\...
+        out = out.replace(/(^|[\s(`"'])\/repo(\/[^\s),;"'`]*)?/g, (_, pre, rest) =>
+          pre + 'C:\\repo' + (rest ? rest.replace(/\//g, '\\') : '')
+        );
+        // Convert relative / dot-dir / placeholder filesystem paths without touching URLs, slash commands, or English prose
+        out = out.replace(
+          /(^|[\s(`"'\[])((?:<[a-z0-9-]+>|\.\.?|\.[a-z0-9_-]+|people|services|src|packages|pkg|rules|skills|tools|docs|scripts)\/[^\s),;"'`\]]*)/gi,
+          (_, pre, pathPart) => pre + pathPart.replace(/\//g, '\\')
+        );
+      }
+      return out.replace(/\{\{WSL_HINT\}\}/g, p.wslHint);
+    }
+
     // ==================== DATA DEFINITIONS ====================
     const MATRIX_DATA = [
       {
@@ -367,13 +387,13 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude/CLAUDE.md', '/etc/claude-code/CLAUDE.md (Managed)'],
+              paths: ['~/.claude/CLAUDE.md', '{{CLAUDE_MANAGED}}CLAUDE.md (Managed)'],
               detail: 'Identical across CLI & Desktop Code tab as your personal coding baseline across all repos.',
               extraInfo: 'Desktop Chat/Cowork tabs (non-coding workflows) do not auto-load CLAUDE.md.'
             },
             codex: {
               paths: ['~/.codex/AGENTS.override.md (if present)', '~/.codex/AGENTS.md (fallback)'],
-              detail: 'Identical in CLI & Desktop App. If AGENTS.override.md exists in ~/.codex/, it replaces ~/.codex/AGENTS.md.'
+              detail: 'Identical in CLI & Desktop App. If AGENTS.override.md exists in ~/.codex/, it replaces ~/.codex/AGENTS.md.{{WSL_HINT}}'
             },
             agy: {
               paths: ['~/.gemini/{AGENTS,GEMINI}.md', '~/.gemini/config/{AGENTS,GEMINI}.md', '~/.gemini/config/rules/*.md (YAML trigger required)'],
@@ -444,13 +464,13 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude.json (top-level "mcpServers")', '/etc/claude-code/managed-mcp.json (Enterprise)'],
+              paths: ['~/.claude.json (top-level "mcpServers")', '{{CLAUDE_MANAGED}}managed-mcp.json (Enterprise)'],
               detail: 'Identical across CLI & Desktop Code tab for user-scoped personal coding MCP servers.',
-              extraInfo: 'Desktop Chat/Cowork tabs use a separate config file: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows).'
+              extraInfo: 'Desktop Chat/Cowork tabs use a separate config file: {{CLAUDE_DESKTOP_MCP}}.'
             },
             codex: {
               paths: ['~/.codex/config.toml ([mcp_servers.<name>])'],
-              detail: 'Identical in CLI & Desktop App—adding a server via CLI immediately appears in the Codex Desktop App.'
+              detail: 'Identical in CLI & Desktop App—adding a server via CLI immediately appears in the Codex Desktop App.{{WSL_HINT}}'
             },
             agy: {
               paths: ['~/.gemini/config/mcp_config.json ("mcpServers")', '~/.gemini/config/plugins/<name>/mcp_config.json'],
@@ -495,7 +515,7 @@
             label: 'Overwrite / Merge',
             claude: {
               badge: 'Union by Name | Collision = Full Block Replace (No Deep-Merge)',
-              paths: ['1. Managed (/etc)', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins'],
+              paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins'],
               detail: 'Identical in CLI & Desktop Code tab. Duplicate server key replaces the entire block (no env/args merging).'
             },
             codex: {
@@ -524,8 +544,8 @@
               detail: 'Identical in CLI & Desktop Code tab. Also syncs Claude.ai skills when syncClaudeAiSkills is enabled.'
             },
             codex: {
-              paths: ['~/.agents/skills/<name>/SKILL.md', '~/.codex/skills/<name>/SKILL.md', '~/.codex/prompts/<name>.md', '/etc/codex/skills/ (Admin)'],
-              detail: 'Identical in CLI & Desktop App. Both read ~/.agents/skills/ and ~/.codex/skills/.'
+              paths: ['~/.agents/skills/<name>/SKILL.md', '~/.codex/skills/<name>/SKILL.md', '~/.codex/prompts/<name>.md', '{{CODEX_ADMIN_SKILLS}} (Admin)'],
+              detail: 'Identical in CLI & Desktop App. Both read ~/.agents/skills/ and ~/.codex/skills/.{{WSL_HINT}}'
             },
             agy: {
               paths: ['~/.gemini/config/skills/<name>/SKILL.md (App + CLI Personal)', '~/.gemini/antigravity-cli/skills/ (CLI ONLY)', '~/.gemini/skills/ (CLI ONLY)'],
@@ -545,7 +565,7 @@
               detail: 'Identical in CLI & Desktop App. Shared via version control.'
             },
             agy: {
-              paths: ['<repo>/.agents/skills/<name>/SKILL.md', 'people/<user>/.agents/skills/ (via .gemini/config.json)', 'Paths in <repo>/.agents/skills.json'],
+              paths: ['<repo>/.agents/skills/<name>/SKILL.md', 'people/<user>/.agents/skills/ (via .gemini/config.json, uses {{USER_VAR}})', 'Paths in <repo>/.agents/skills.json'],
               detail: 'Identical in App & CLI. Scanned 1 level deep unless deeper paths are listed in skills.json.'
             }
           },
@@ -575,12 +595,12 @@
             },
             codex: {
               badge: 'Union Pool | Repo > User > Admin > System',
-              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.agents & ~/.codex)', '3. Admin (/etc/codex/skills/)', '4. System'],
+              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.agents & ~/.codex)', '3. Admin ({{CODEX_ADMIN_SKILLS}})', '4. System'],
               detail: 'Identical in CLI & Desktop App. Repo-local wins name collisions.'
             },
             agy: {
               badge: 'Personal-in-Repo > Workspace > Global Config > Built-in',
-              paths: ['(CLI #1) ~/.gemini/antigravity-cli/skills & ~/.gemini/skills', '1. Personal Repo (people/{user}/.agents/skills)', '2. Workspace (.agents/skills & skills.json)', '3. Personal Global (~/.gemini/config/skills)', '4. Built-in (Plugins: <plugin>:<skill>)'],
+              paths: ['(CLI #1) ~/.gemini/antigravity-cli/skills/ & ~/.gemini/skills/', '1. Personal Repo (people/{user}/.agents/skills/)', '2. Workspace (.agents/skills/ & skills.json)', '3. Personal Global (~/.gemini/config/skills/)', '4. Built-in (Plugins: <plugin>:<skill>)'],
               detail: 'Plugin skills are namespaced as <plugin>:<skill> and never collide.',
               appDelta: 'In CLI only, ~/.gemini/antigravity-cli/skills/ & ~/.gemini/skills/ sit above #1 (beating workspace skills & ignoring manifest exclude lists).'
             }
@@ -596,19 +616,19 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude/settings.json', '/etc/claude-code/managed-settings.json (Enterprise)'],
+              paths: ['~/.claude/settings.json', '{{CLAUDE_MANAGED}}managed-settings.json (Enterprise)'],
               detail: 'Identical across CLI & Desktop Code tab for default model, permissions, hooks, and env vars.',
               extraInfo: 'Non-coding Desktop App preferences (window, appearance, Chat/Cowork/Routines toggles) are managed in Desktop UI settings.'
             },
             codex: {
-              paths: ['~/.codex/config.toml ($CODEX_HOME/config.toml)', '~/.codex/<profile>.config.toml'],
-              detail: 'Identical across CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.',
+              paths: ['~/.codex/config.toml ({{CODEX_HOME_VAR}}/config.toml)', '~/.codex/<profile>.config.toml'],
+              detail: 'Identical across CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.{{WSL_HINT}}',
               extraInfo: 'Desktop App layers multi-thread orchestration, worktree switching, automations, and Agent Security UI on top of shared config.toml.'
             },
             agy: {
-              paths: ['CLI: ~/.gemini/antigravity-cli/settings.json (Sparse JSON)', 'App: Settings UI (Cmd+,) Global Preferences', 'Shared: ~/.gemini/config/hooks.json & *.json manifests'],
+              paths: ['CLI: ~/.gemini/antigravity-cli/settings.json (Sparse JSON)', 'App: Settings UI ({{SETTINGS_KEY}}) Global Preferences', 'Shared: ~/.gemini/config/hooks.json & *.json manifests'],
               detail: 'Hooks & discovery manifests ({skills,rules,agents,plugins}.json) are shared across both surfaces.',
-              appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo) & models in App UI.',
+              appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo) & models in App UI ({{SETTINGS_KEY}}).',
               extraInfo: 'App UI also configures Desktop-only features: Interface Layout (Software Engineering vs Knowledge Work), Browser actuation, and Orchestrator/Executor model split.'
             }
           },
@@ -624,7 +644,7 @@
               detail: 'Identical in CLI & Desktop App once the repo is marked trusted.'
             },
             agy: {
-              paths: ['Shared: <repo>/.agents/hooks.json & *.json manifests', 'Shared: <repo>/.gemini/config.json (personal_customization_dir)', 'App: Per-Project Settings UI (Folders, Worktrees, Preset override)'],
+              paths: ['Shared: <repo>/.agents/hooks.json & *.json manifests', 'Shared: <repo>/.gemini/config.json (personal_customization_dir, uses {{USER_VAR}})', 'App: Per-Project Settings UI (Folders, Worktrees, Preset override)'],
               detail: 'Repo hooks, manifests, and personal_customization_dir work identically in App & CLI.',
               appDelta: 'App supports isolated Per-Project settings in UI (Inherit Global vs project Permission Preset override, Local vs Git Worktree mode); CLI stores trustedWorkspaces in its global settings.json.'
             }
@@ -650,7 +670,7 @@
             label: 'Overwrite / Merge',
             claude: {
               badge: 'Scalars Overwrite | Objects Deep-Merge | Arrays Replace',
-              paths: ['1. Managed (/etc)', '2. CLI Flags (CLI only)', '3. .claude/settings.local.json', '4. .claude/settings.json', '5. ~/.claude/settings.json'],
+              paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. CLI Flags (CLI only)', '3. .claude/settings.local.json', '4. .claude/settings.json', '5. ~/.claude/settings.json'],
               detail: 'Identical merge engine in CLI & Desktop Code tab. Arrays (like permissions.allow) replace rather than append.'
             },
             codex: {
@@ -706,13 +726,13 @@
       {
         id: 'claude-desktop-mcp',
         cli: 'claude',
-        path: '~/Library/Application Support/Claude/claude_desktop_config.json',
+        path: '{{CLAUDE_DESKTOP_MCP}}',
         scope: 'Desktop Extra: Chat / Cowork Tabs',
         type: 'Desktop Extra MCP (JSON)',
         behavior: 'Non-coding Chat/Cowork MCP file (separate from Code tab & CLI)',
         git: 'Local Machine Only',
-        summary: 'Additional info for non-coding Claude Desktop tabs (Chat / Cowork). On Windows: %APPDATA%\\Claude\\claude_desktop_config.json. The Desktop Code tab shares ~/.claude.json & .mcp.json with Claude Code CLI.',
-        code: `{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/docs"]\n    }\n  }\n}`
+        summary: 'Additional info for non-coding Claude Desktop tabs (Chat / Cowork). The Desktop Code tab shares ~/.claude.json & .mcp.json with Claude Code CLI.',
+        code: `{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{{SAMPLE_DOCS}}"]\n    }\n  }\n}`
       },
       {
         id: 'claude-skills',
@@ -820,6 +840,20 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    function escLoc(str) {
+      return esc(loc(str));
+    }
+
+    let activeOS = (function () {
+      try {
+        const param = new URLSearchParams(window.location.search).get('os');
+        if (param && OS_PROFILES[param.toLowerCase()]) return param.toLowerCase();
+        const saved = localStorage.getItem('cli-guide-os');
+        return (saved && OS_PROFILES[saved]) ? saved : 'macos';
+      } catch (_) {
+        return 'macos';
+      }
+    })();
     let activeMainTab = 'matrix';
     let activePillar = 'all';
     let activeMatrixCli = 'all';
@@ -828,6 +862,23 @@
     let activeSimCli = 'claude';
     let activeTreeCli = 'all';
     let selectedTreeNodeId = TREE_NODES[0].id;
+
+    // ==================== OS SWITCHER ====================
+    function setOS(os) {
+      activeOS = OS_PROFILES[os] ? os : 'macos';
+      try { localStorage.setItem('cli-guide-os', activeOS); } catch (_) {}
+      ['macos', 'windows', 'linux'].forEach(o => {
+        const btn = document.getElementById('os-btn-' + o);
+        if (!btn) return;
+        btn.className = o === activeOS
+          ? 'px-1.5 sm:px-2 py-0.5 rounded transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
+          : 'px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      });
+      renderMatrix();
+      renderSimulator();
+      renderTree();
+      renderGotchas();
+    }
 
     // ==================== STANDALONE THEME CONTROLS ====================
     function applyStandaloneTheme(name) {
@@ -915,22 +966,22 @@
 
     function renderCell(data) {
       const badgeHtml = data.badge
-        ? `<div class="mb-1.5"><span class="inline-block text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] leading-snug path-chip">${esc(data.badge)}</span></div>`
+        ? `<div class="mb-1.5"><span class="inline-block text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] leading-snug path-chip">${escLoc(data.badge)}</span></div>`
         : '';
       const pathsHtml = data.paths.map(p =>
-        `<li class="text-[11px] sm:text-xs font-mono text-[var(--code-foreground)] bg-[var(--card)] px-2 py-1 rounded border border-[var(--card-border)] path-chip">${esc(p)}</li>`
+        `<li class="text-[11px] sm:text-xs font-mono text-[var(--code-foreground)] bg-[var(--card)] px-2 py-1 rounded border border-[var(--card-border)] path-chip">${escLoc(p)}</li>`
       ).join('');
       const deltaHtml = data.appDelta
-        ? `<div class="mt-2 p-2 rounded-md border border-dashed border-[var(--border)] bg-[var(--card)] text-[11px] leading-snug text-[var(--foreground)]"><span class="font-mono font-bold uppercase text-[10px] mr-1">App ≠ CLI:</span>${esc(data.appDelta)}</div>`
+        ? `<div class="mt-2 p-2 rounded-md border border-dashed border-[var(--border)] bg-[var(--card)] text-[11px] leading-snug text-[var(--foreground)]"><span class="font-mono font-bold uppercase text-[10px] mr-1">App ≠ CLI:</span>${escLoc(data.appDelta)}</div>`
         : '';
       const extraHtml = data.extraInfo
-        ? `<div class="mt-1.5 px-2 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--secondary)] text-[11px] leading-snug text-[var(--muted-foreground)]"><span class="font-mono font-semibold uppercase text-[10px] text-[var(--foreground)] mr-1">Desktop Extra:</span>${esc(data.extraInfo)}</div>`
+        ? `<div class="mt-1.5 px-2 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--secondary)] text-[11px] leading-snug text-[var(--muted-foreground)]"><span class="font-mono font-semibold uppercase text-[10px] text-[var(--foreground)] mr-1">Desktop Extra:</span>${escLoc(data.extraInfo)}</div>`
         : '';
       return `
         <div class="space-y-1.5 min-w-0">
           ${badgeHtml}
           <ul class="space-y-1">${pathsHtml}</ul>
-          <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${esc(data.detail)}</p>
+          <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${escLoc(data.detail)}</p>
           ${deltaHtml}
           ${extraHtml}
         </div>
@@ -1068,21 +1119,21 @@
         container.innerHTML = `
           <div class="lg:col-span-12 space-y-2.5 min-w-0">
             <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <div class="text-xs font-bold text-[var(--foreground)]">${esc(simData.title)}</div>
-              <div class="text-xs text-[var(--muted-foreground)] mt-0.5 leading-relaxed">${esc(simData.ruleSummary)}</div>
+              <div class="text-xs font-bold text-[var(--foreground)]">${escLoc(simData.title)}</div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5 leading-relaxed">${escLoc(simData.ruleSummary)}</div>
             </div>
             <div class="space-y-2">
               ${simData.files.map(f => `
                 <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
                   <div class="space-y-1 min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
-                      <code class="text-[11px] sm:text-xs font-bold text-[var(--code-foreground)] path-chip">${esc(f.path)}</code>
-                      <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">${esc(f.badge)}</span>
+                      <code class="text-[11px] sm:text-xs font-bold text-[var(--code-foreground)] path-chip">${escLoc(f.path)}</code>
+                      <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">${escLoc(f.badge)}</span>
                     </div>
-                    <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${esc(f.desc)}</p>
+                    <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${escLoc(f.desc)}</p>
                   </div>
                   <div class="text-[11px] font-mono font-semibold shrink-0 px-2 py-1 rounded border border-[var(--card-border)] bg-[var(--card)] w-fit">
-                    ${esc(f.status)}
+                    ${escLoc(f.status)}
                   </div>
                 </div>
               `).join('')}
@@ -1119,16 +1170,16 @@
 
         container.innerHTML = `
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(mcpData.leftTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.leftCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${escLoc(mcpData.leftTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(mcpData.leftCode)}</pre>
           </div>
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(mcpData.rightTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.rightCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${escLoc(mcpData.rightTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(mcpData.rightCode)}</pre>
           </div>
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border-2 border-[var(--primary)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${esc(mcpData.resultTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.resultCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${escLoc(mcpData.resultTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(mcpData.resultCode)}</pre>
           </div>
         `;
       } else if (activeSimScenario === 'skills') {
@@ -1146,15 +1197,15 @@
             steps: [
               { rank: '1 (WINS)', scope: 'Repo / CWD Skill', path: '<cwd-up-to-repo>/.agents/skills/deploy/SKILL.md', note: 'Project-local skill wins over user, admin, and system.' },
               { rank: '2', scope: 'User Global Skill', path: '~/.agents/skills/deploy/ or ~/.codex/skills/deploy/', note: 'Personal fallback across repos.' },
-              { rank: '3', scope: 'Admin Skill', path: '/etc/codex/skills/deploy/SKILL.md', note: 'Machine-wide admin provisioned skill.' },
+              { rank: '3', scope: 'Admin Skill', path: '{{CODEX_ADMIN_SKILLS}}deploy/SKILL.md', note: 'Machine-wide admin provisioned skill.' },
               { rank: '4', scope: 'System Bundled', path: '<bundled-with-codex>', note: 'Lowest priority default skill.' }
             ]
           },
           agy: {
             note: 'Antigravity CLI resolves a duplicate skill named "deploy" via a 5-tier priority ladder:',
             steps: [
-              { rank: '1 (WINS IN CLI!)', scope: 'CLI-Exclusive Global & Shared', path: '~/.gemini/antigravity-cli/skills/deploy/ & ~/.gemini/skills/deploy/', note: 'Beats even workspace skills and ignores manifest exclude lists!' },
-              { rank: '2', scope: 'Personal Folder in Shared Repo', path: '<repo>/people/{user}/.agents/skills/deploy/SKILL.md', note: 'Configured via .gemini/config.json ("personal_customization_dir").' },
+              { rank: '1 (WINS IN CLI!)', scope: 'CLI-Exclusive Global & Shared', path: '~/.gemini/antigravity-cli/skills/deploy/ & ~/.gemini/skills/deploy/', note: 'Beats even workspace skills and ignores manifest exclude lists! (Not read by Desktop App.)' },
+              { rank: '2', scope: 'Personal Folder in Shared Repo', path: '<repo>/people/{user}/.agents/skills/deploy/SKILL.md', note: 'Configured via .gemini/config.json ("personal_customization_dir", expands {{USER_VAR}}).' },
               { rank: '3', scope: 'Workspace & Project Manifests', path: '<cwd-up-to-repo>/.agents/skills/deploy/ (or skills.json)', note: 'Standard team workspace skill checked into VCS.' },
               { rank: '4', scope: 'Personal Cross-Surface Global', path: '~/.gemini/config/skills/deploy/ (or global skills.json)', note: 'Shared across both Antigravity App and CLI.' },
               { rank: '5', scope: 'Built-in Skills', path: '<antigravity-builtin>/skills/deploy/', note: 'Plugin skills use <plugin>:deploy and never collide.' }
@@ -1164,16 +1215,16 @@
 
         container.innerHTML = `
           <div class="lg:col-span-12 space-y-2.5 min-w-0">
-            <p class="text-xs text-[var(--muted-foreground)]">${esc(skillLadder.note)}</p>
+            <p class="text-xs text-[var(--muted-foreground)]">${escLoc(skillLadder.note)}</p>
             <div class="space-y-2">
               ${skillLadder.steps.map((s, idx) => `
                 <div class="p-3 rounded-lg bg-[var(--background)] border ${idx === 0 ? 'border-2 border-[var(--primary)]' : 'border-[var(--card-border)]'} space-y-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded ${idx === 0 ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]'}">#${esc(s.rank)}</span>
-                    <span class="text-xs font-bold text-[var(--foreground)]">${esc(s.scope)}</span>
+                    <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded ${idx === 0 ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]'}">#${escLoc(s.rank)}</span>
+                    <span class="text-xs font-bold text-[var(--foreground)]">${escLoc(s.scope)}</span>
                   </div>
-                  <code class="text-[11px] sm:text-xs text-[var(--code-foreground)] block path-chip">${esc(s.path)}</code>
-                  <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${esc(s.note)}</p>
+                  <code class="text-[11px] sm:text-xs text-[var(--code-foreground)] block path-chip">${escLoc(s.path)}</code>
+                  <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${escLoc(s.note)}</p>
                 </div>
               `).join('')}
             </div>
@@ -1199,26 +1250,26 @@
           },
           agy: {
             leftTitle: 'Global (~/.gemini/antigravity-cli/settings.json)',
-            leftCode: `{\n  "agentMode": "default",\n  "verbosity": "medium"\n}\n// + ~/.gemini/config/skills.json:\n// entries: ["/team/shared-skills"]`,
+            leftCode: `{\n  "agentMode": "default",\n  "verbosity": "medium"\n}\n// + ~/.gemini/config/skills.json:\n// entries: ["{{TEAM_SHARED}}"]`,
             rightTitle: 'CLI Flag + Project Manifest',
             rightCode: `// Launch: agy --mode auto\n// <repo>/.agents/skills.json:\n{\n  "entries": [{ "path": "tools/skills" }],\n  "exclude": ["legacy-deploy"]\n}`,
             resultTitle: 'Effective Config (Antigravity CLI)',
-            resultCode: `// Runtime:\nagentMode = "auto"      // --mode flag overrides settings.json\nverbosity = "medium"    // from settings.json\n\n// Skill Discovery (Additive Union):\n- CLI-exclusive folders (ignore exclude!)\n- <repo>/.agents/skills + tools/skills\n- ~/.gemini/config/skills + /team/shared-skills\n  (all minus "legacy-deploy")`
+            resultCode: `// Runtime:\nagentMode = "auto"      // --mode flag overrides settings.json\nverbosity = "medium"    // from settings.json\n\n// Skill Discovery (Additive Union):\n- CLI-exclusive folders (ignore exclude!)\n- <repo>/.agents/skills + tools/skills\n- ~/.gemini/config/skills + {{TEAM_SHARED}}\n  (all minus "legacy-deploy")`
           }
         }[activeSimCli];
 
         container.innerHTML = `
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(cfgData.leftTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.leftCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${escLoc(cfgData.leftTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(cfgData.leftCode)}</pre>
           </div>
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(cfgData.rightTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.rightCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${escLoc(cfgData.rightTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(cfgData.rightCode)}</pre>
           </div>
           <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border-2 border-[var(--primary)] space-y-1.5 min-w-0">
-            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${esc(cfgData.resultTitle)}</div>
-            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.resultCode)}</pre>
+            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${escLoc(cfgData.resultTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(cfgData.resultCode)}</pre>
           </div>
         `;
       }
@@ -1260,10 +1311,10 @@
         return `
           <button onclick="selectTreeNode('${node.id}')" class="w-full text-left p-2.5 rounded-lg border transition-colors min-w-0 ${isSelected ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : 'bg-[var(--background)] text-[var(--foreground)] border-[var(--card-border)] hover:border-[var(--border)]'}">
             <div class="flex items-center justify-between gap-2 min-w-0">
-              <span class="text-[11px] sm:text-xs font-mono font-bold truncate">${esc(node.path)}</span>
+              <span class="text-[11px] sm:text-xs font-mono font-bold truncate">${escLoc(node.path)}</span>
               <span class="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-[var(--background)]/20 text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]'}">${cliLabel[node.cli]}</span>
             </div>
-            <div class="text-[11px] mt-0.5 truncate ${isSelected ? 'text-[var(--primary-foreground)]/80' : 'text-[var(--muted-foreground)]'}">${esc(node.type)} &bull; ${esc(node.scope)}</div>
+            <div class="text-[11px] mt-0.5 truncate ${isSelected ? 'text-[var(--primary-foreground)]/80' : 'text-[var(--muted-foreground)]'}">${escLoc(node.type)} &bull; ${escLoc(node.scope)}</div>
           </button>
         `;
       }).join('');
@@ -1276,41 +1327,118 @@
           <div class="border-b border-[var(--card-border)] pb-3">
             <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
               <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] uppercase">${esc(activeNode.cli)}</span>
-              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${esc(activeNode.scope)}</span>
-              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${esc(activeNode.git)}</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${escLoc(activeNode.scope)}</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${escLoc(activeNode.git)}</span>
             </div>
-            <h3 class="text-xs sm:text-sm font-mono font-bold text-[var(--code-foreground)] path-chip">${esc(activeNode.path)}</h3>
+            <h3 class="text-xs sm:text-sm font-mono font-bold text-[var(--code-foreground)] path-chip">${escLoc(activeNode.path)}</h3>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] min-w-0">
               <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Artifact Type</div>
-              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${esc(activeNode.type)}</div>
+              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${escLoc(activeNode.type)}</div>
             </div>
             <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] min-w-0">
               <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Overwrite / Merge Rule</div>
-              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${esc(activeNode.behavior)}</div>
+              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${escLoc(activeNode.behavior)}</div>
             </div>
           </div>
 
           <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
             <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)] mb-1">How It Works</div>
-            <p class="text-xs text-[var(--foreground)] leading-relaxed">${esc(activeNode.summary)}</p>
+            <p class="text-xs text-[var(--foreground)] leading-relaxed">${escLoc(activeNode.summary)}</p>
           </div>
 
           <div class="space-y-1 min-w-0">
             <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Example Contents</div>
-            <pre class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(activeNode.code)}</pre>
+            <pre class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(activeNode.code)}</pre>
           </div>
         </div>
       `;
     }
 
+    // ==================== TAB 4: GOTCHAS ====================
+    function renderGotchas() {
+      const el = document.getElementById('gotchas-container');
+      if (!el) return;
+      const cards = [
+        {
+          title: 'Claude Code (CLI + Desktop)',
+          bin: 'claude',
+          items: [
+            {
+              heading: '1. Subdir CLAUDE.md is Lazy-Loaded',
+              body: `Root &amp; ancestor <code class="text-[var(--code-foreground)]">CLAUDE.md</code> load eagerly in CLI &amp; Desktop Code tab. Child <code class="text-[var(--code-foreground)]">${escLoc('pkg/CLAUDE.md')}</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">${escLoc('pkg/')}</code>.`
+            },
+            {
+              heading: '2. MCP Name Clash = Full Replacement',
+              body: `In CLI &amp; Desktop <strong>Code tab</strong>: Local (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude.json')}</code> project entry) &gt; Project (<code class="text-[var(--code-foreground)]">.mcp.json</code>) &gt; User (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude.json')}</code>). Same server name replaces the entire block—no deep-merging of <code class="text-[var(--code-foreground)]">env</code> or <code class="text-[var(--code-foreground)]">args</code>. <span class="italic">(Desktop Extra: non-coding Chat/Cowork tabs read <code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_DESKTOP_MCP}}')}</code> instead.)</span>`
+            },
+            {
+              heading: '3. settings.json Arrays Replace, Not Append',
+              body: `Defining <code class="text-[var(--code-foreground)]">permissions.allow</code> in project <code class="text-[var(--code-foreground)]">${escLoc('.claude/settings.json')}</code> <strong>wipes out</strong> your global allow array instead of appending. Managed enterprise policies live in <code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_MANAGED_DIR}}')}</code>.`
+            }
+          ]
+        },
+        {
+          title: 'Codex (CLI + Desktop App)',
+          bin: 'codex',
+          items: [
+            {
+              heading: '1. AGENTS.override.md Wins Same Level',
+              body: `Both CLI &amp; Desktop App pick <strong>at most one</strong> doc per directory walking Global &rarr; Root &rarr; CWD. <code class="text-[var(--code-foreground)]">AGENTS.override.md</code> replaces <code class="text-[var(--code-foreground)]">AGENTS.md</code> in that folder.`
+            },
+            {
+              heading: '2. Silent 32 KiB Instruction Cap',
+              body: `Combined <code class="text-[var(--code-foreground)]">AGENTS.md</code> chain stops silently at <code class="text-[var(--code-foreground)]">project_doc_max_bytes</code> (32 KiB default) unless raised in shared <code class="text-[var(--code-foreground)]">config.toml</code>.`
+            },
+            {
+              heading: '3. Shared Harness & Repo Trust Gate',
+              body: `Changes to <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.codex/config.toml')}</code> (<code class="text-[var(--code-foreground)]">${escLoc('{{CODEX_HOME_VAR}}')}</code>), <code class="text-[var(--code-foreground)]">[mcp_servers.*]</code>, and <code class="text-[var(--code-foreground)]">${escLoc('.agents/skills/')}</code> apply identically to CLI &amp; Desktop App. Project MCP requires marking the repo trusted.${escLoc('{{WSL_HINT}}')}`
+            }
+          ]
+        },
+        {
+          title: 'Antigravity (CLI + Desktop App)',
+          bin: 'agy',
+          items: [
+            {
+              heading: '1. Walks UP Only + 24 KB / 20k Token Budget',
+              body: `Both App &amp; CLI walk UP to repo root (never down) and skip <code class="text-[var(--code-foreground)]">${escLoc('rules/*.md')}</code> missing YAML <code class="text-[var(--code-foreground)]">trigger:</code>. App supports <code class="text-[var(--code-foreground)]">manual</code> <code class="text-[var(--code-foreground)]">@</code>-mentions; CLI does not.`
+            },
+            {
+              heading: '2. CLI-Exclusive Skills Are Invisible to App!',
+              body: `<code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.gemini/antigravity-cli/skills/')}</code> and <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.gemini/skills/')}</code> take #1 priority in CLI, but the <strong>Desktop App doesn't read them</strong>—use <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.gemini/config/skills/')}</code> for both.`
+            },
+            {
+              heading: '3. Separate Settings Storage (App UI vs CLI JSON)',
+              body: `CLI stores prefs in <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.gemini/antigravity-cli/settings.json')}</code>; App stores Global + Per-Project settings (Permission Presets, Layouts, Worktrees) in App UI (<code class="text-[var(--code-foreground)]">${escLoc('{{SETTINGS_KEY}}')}</code>).`
+            }
+          ]
+        }
+      ];
+
+      el.innerHTML = cards.map(card => `
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5 min-w-0">
+          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5 gap-2">
+            <h3 class="text-sm font-bold text-[var(--foreground)]">${esc(card.title)}</h3>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] shrink-0">${esc(card.bin)}</span>
+          </div>
+          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            ${card.items.map(it => `
+              <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+                <strong class="text-[var(--foreground)] block mb-1">${esc(it.heading)}</strong>
+                ${it.body}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `).join('');
+    }
+
     // ==================== INITIALIZE ====================
     initThemeSwitcherUI();
-    renderMatrix();
-    renderSimulator();
-    renderTree();
+    setOS(activeOS);
   </script>
 </body>
 </html>
