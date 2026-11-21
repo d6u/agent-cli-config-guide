@@ -142,30 +142,30 @@
         <button onclick="jumpToPillar('mcp')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <span class="text-xs font-bold text-[var(--foreground)]">2. MCP Servers</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union + Replace</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union + Override</span>
           </div>
           <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
-            Distinct servers combine; matching key replaces the entire block.
+            Distinct servers combine; matching keys replace (Claude) or deep-merge (Codex).
           </p>
         </button>
 
         <button onclick="jumpToPillar('skills')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <span class="text-xs font-bold text-[var(--foreground)]">3. Skills</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union + Shadow</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union Pool</span>
           </div>
           <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
-            Progressive disclosure (<code class="text-[var(--code-foreground)]">SKILL.md</code>); higher scope shadows duplicates.
+            Progressive disclosure (<code class="text-[var(--code-foreground)]">SKILL.md</code>); duplicates shadow (Claude/AGY) or coexist (Codex).
           </p>
         </button>
 
         <button onclick="jumpToPillar('configs')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
             <span class="text-xs font-bold text-[var(--foreground)]">4. Configs</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Overwrite</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Merge + Override</span>
           </div>
           <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
-            JSON/TOML preferences &amp; permissions; specific scopes override.
+            JSON/TOML preferences &amp; permissions; scalars override, lists merge (Claude).
           </p>
         </button>
       </div>
@@ -320,7 +320,7 @@
         claudeManaged: 'C:\\Program Files\\ClaudeCode\\',
         claudeManagedDir: 'C:\\Program Files\\ClaudeCode',
         claudeDesktopMcp: '%APPDATA%\\Claude\\claude_desktop_config.json',
-        codexAdminSkills: 'C:\\ProgramData\\codex\\skills\\',
+        codexAdminSkills: 'C:\\ProgramData\\OpenAI\\Codex\\skills\\',
         codexHomeVar: '%CODEX_HOME%',
         settingsKey: 'Ctrl+,',
         userVar: 'USERNAME',
@@ -389,9 +389,9 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['{{CLAUDE_MANAGED}}CLAUDE.md (Managed Policy)', '~/.claude/CLAUDE.md (User)'],
-              multiRule: 'APPENDS (Managed 1st, then User — Managed cannot be excluded)',
-              detail: 'Managed CLAUDE.md does NOT silence User or Project files—it stacks first as an org-wide baseline and cannot be skipped via claudeMdExcludes. User ~/.claude/CLAUDE.md appends after it.',
+              paths: ['{{CLAUDE_MANAGED}}CLAUDE.md (Managed Policy)', '~/.claude/CLAUDE.md (User)', '~/.claude/rules/*.md (User Rules)'],
+              multiRule: 'APPENDS (Managed 1st, then User CLAUDE.md & rules/*.md — Managed non-excludable)',
+              detail: 'Managed CLAUDE.md does NOT silence User or Project files—it stacks first as an org-wide baseline and cannot be skipped via claudeMdExcludes. User ~/.claude/CLAUDE.md and ~/.claude/rules/*.md append after it.',
               extraInfo: 'Desktop Chat/Cowork tabs (non-coding workflows) do not auto-load CLAUDE.md.'
             },
             codex: {
@@ -409,9 +409,9 @@
             scope: 'project',
             label: 'Project / Root',
             claude: {
-              paths: ['<repo>/CLAUDE.md', '<repo>/.claude/CLAUDE.md', '<repo>/.claude/rules/*.md', '<repo>/CLAUDE.local.md (Gitignored)'],
-              multiRule: 'APPENDS ALL (CLAUDE.md -> .claude/CLAUDE.md -> .claude/rules/*.md -> CLAUDE.local.md)',
-              detail: 'All present files load and append sequentially at startup—team files including .claude/rules/*.md load before your gitignored CLAUDE.local.md. Inspect exact order via /memory.'
+              paths: ['<repo>/CLAUDE.md & <repo>/.claude/CLAUDE.md', '<repo>/.claude/rules/*.md (eager unless paths:-scoped)', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/AGENTS.md (fallback if no CLAUDE.md, v2.1.277+)'],
+              multiRule: 'APPENDS ALL (CLAUDE.md -> .claude/CLAUDE.md -> rules/*.md -> CLAUDE.local.md)',
+              detail: 'Unconditional files load and append at startup; .claude/rules/*.md with YAML paths: frontmatter load lazily when matching files are touched. Also reads AGENTS.md automatically when no CLAUDE.md/CLAUDE.local.md exists (configurable via /config). Inspect via /context all.'
             },
             codex: {
               paths: ['<repo>/AGENTS.override.md', '<repo>/AGENTS.md', 'project_doc_fallback_filenames (config.toml)'],
@@ -429,9 +429,9 @@
             scope: 'directory',
             label: 'Subdirectory / CWD',
             claude: {
-              paths: ['Ancestors up to CWD: Eager at startup', 'Child subdirs (<subdir>/CLAUDE.md): Lazy ON DEMAND'],
-              multiRule: 'APPENDS ALL (Eager ancestors + Lazy child subdirs)',
-              detail: 'Identical in CLI & Desktop Code tab. All ancestor files append at startup; child subdir CLAUDE.md appends dynamically only when a file inside it is read/edited.'
+              paths: ['Ancestors up to CWD: Eager at startup', 'Child subdirs (<subdir>/CLAUDE[.local].md) & paths:-scoped rules: Lazy ON DEMAND'],
+              multiRule: 'APPENDS ALL (Eager ancestors + Lazy child subdirs & paths: rules)',
+              detail: 'Identical in CLI & Desktop Code tab. All ancestor files append at startup; child subdir CLAUDE.md / CLAUDE.local.md and paths:-scoped .claude/rules/*.md append dynamically only when matching files are read/edited.'
             },
             codex: {
               paths: ['Every dir from <repo-root> down to <cwd>: AGENTS.override.md or AGENTS.md'],
@@ -449,9 +449,9 @@
             scope: 'resolution',
             label: 'Append / Overwrite',
             claude: {
-              badge: 'Cumulative Append (Managed -> User -> Root -> .claude/ -> rules/*.md -> Local -> Lazy Subdir)',
-              paths: ['1. Managed ({{CLAUDE_MANAGED}}CLAUDE.md — non-excludable)', '2. User (~/.claude/CLAUDE.md)', '3. Project (<repo>/CLAUDE.md -> <repo>/.claude/CLAUDE.md -> <repo>/.claude/rules/*.md)', '4. Local (<repo>/CLAUDE.local.md) + Lazy Subdir CLAUDE.md'],
-              detail: 'All layers concatenate rather than deleting each other (verify active stack with /memory). Personal CLAUDE.local.md loads after team .claude/rules/*.md, while Managed CLAUDE.md always remains injected and cannot be excluded via claudeMdExcludes.'
+              badge: 'Cumulative Append (Managed -> User -> Root -> .claude/ -> rules/*.md -> Local -> Lazy)',
+              paths: ['1. Managed ({{CLAUDE_MANAGED}}CLAUDE.md — non-excludable)', '2. User (~/.claude/CLAUDE.md & ~/.claude/rules/*.md)', '3. Project (<repo>/CLAUDE.md -> <repo>/.claude/CLAUDE.md -> unconditional .claude/rules/*.md)', '4. Local (<repo>/CLAUDE.local.md) + Lazy Subdir & paths:-scoped Rules'],
+              detail: 'All layers concatenate rather than deleting each other (verify active stack with /context all). Managed CLAUDE.md always remains injected and cannot be excluded via claudeMdExcludes. When no CLAUDE.md/CLAUDE.local.md exists, Claude Code v2.1.277+ falls back to AGENTS.md.'
             },
             codex: {
               badge: 'Top-Down Append + Same-Level Override + 32 KiB Cap',
@@ -480,10 +480,10 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['{{CLAUDE_MANAGED}}managed-mcp.json (Enterprise)', '~/.claude.json (top-level "mcpServers")'],
-              multiRule: 'UNION + OVERRIDE (Managed replaces User on same server name)',
-              detail: 'Distinct server names combine. If both define the same server key, Managed replaces the entire User block (no field deep-merge).',
-              extraInfo: 'Desktop Chat/Cowork tabs use a separate config file: {{CLAUDE_DESKTOP_MCP}}.'
+              paths: ['{{CLAUDE_MANAGED}}managed-mcp.json (Enterprise — EXCLUSIVE lock)', 'managedMcpServers in managed-settings.json (Enterprise — Additive, v2.1.259+)', '~/.claude.json (top-level "mcpServers")'],
+              multiRule: 'EXCLUSIVE (managed-mcp.json locks all) | UNION + REPLACE (managedMcpServers + User)',
+              detail: 'managed-mcp.json deploys a fixed server set and stops user/project servers from loading at all. Use managedMcpServers in managed-settings.json to add org servers alongside User servers (matching key replaces entire block, no deep-merge).',
+              appDelta: 'Claude Desktop local Code tab ALSO loads {{CLAUDE_DESKTOP_MCP}} alongside ~/.claude.json & .mcp.json (shared with Chat/Cowork). Standalone CLI does NOT read claude_desktop_config.json (import via claude mcp add-from-claude-desktop).'
             },
             codex: {
               paths: ['~/.codex/config.toml ([mcp_servers.<name>])'],
@@ -506,7 +506,7 @@
             },
             codex: {
               paths: ['<repo>/.codex/config.toml ([mcp_servers.<name>])'],
-              detail: 'Identical in CLI & Desktop App. Appends new servers to Global; matching [mcp_servers.<name>] replaces the entire Global table (trusted repos only).'
+              detail: 'Identical in CLI & Desktop App (trusted repos only). Appends new servers to Global; matching [mcp_servers.<name>] tables merge keys recursively (arrays like args replace wholesale).'
             },
             agy: {
               paths: ['<repo>/.agents/mcp_config.json', '<repo>/.agents/plugins/<name>/mcp_config.json'],
@@ -523,7 +523,7 @@
             },
             codex: {
               paths: ['Closest / nested <dir>/.codex/config.toml (Trusted projects only)'],
-              detail: 'Identical in CLI & Desktop App. Nested .codex/config.toml closer to CWD appends new servers and replaces matching repo-root server tables.'
+              detail: 'Identical in CLI & Desktop App. Nested .codex/config.toml closer to CWD appends new servers and recursively merges/overrides matching keys in repo-root server tables.'
             },
             agy: {
               paths: ['<workspace-up-to-repo-root>/.agents/mcp_config.json'],
@@ -534,14 +534,15 @@
             scope: 'resolution',
             label: 'Overwrite / Merge',
             claude: {
-              badge: 'Union by Name | Collision = Full Block Replace (No Deep-Merge)',
-              paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins'],
-              detail: 'Identical in CLI & Desktop Code tab. Distinct names combine; duplicate server key replaces the entire block (no env/args merging).'
+              badge: 'Union by Name | Collision = Full Block Replace (managed-mcp.json = Exclusive)',
+              paths: ['[Exclusive] {{CLAUDE_MANAGED}}managed-mcp.json (locks out User/Project)', '1. managedMcpServers (managed-settings.json)', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins & claude.ai Connectors'],
+              detail: 'Distinct names combine; duplicate server key replaces the entire block (no env/args merging). Plugins & connectors deduplicate by endpoint URL/command.',
+              appDelta: 'Desktop local Code tab also loads {{CLAUDE_DESKTOP_MCP}}; standalone CLI does not.'
             },
             codex: {
-              badge: 'Union by Name | Collision = Full Table Replace',
-              paths: ['1. CLI Flags (-c)', '2. Nested .codex/config.toml', '3. Repo Root .codex/config.toml', '4. User ~/.codex/config.toml'],
-              detail: 'Identical in CLI & Desktop App (minus CLI-only -c flags in GUI). Unique tables append; matching server name replaces entire table.'
+              badge: 'Union by Name | Tables Deep-Merge (Arrays Replace)',
+              paths: ['1. CLI Flags (-c)', '2. Nested .codex/config.toml', '3. Repo Root .codex/config.toml', '4. Profile & User ~/.codex/config.toml'],
+              detail: 'Identical in CLI & Desktop App (minus CLI-only -c flags in GUI). Unique tables append; matching [mcp_servers.<name>] tables merge keys recursively (closest wins conflicting keys; arrays like args replace wholesale).'
             },
             agy: {
               badge: 'Union by Name | Workspace Overrides Global | Plugins Namespaced',
@@ -560,14 +561,14 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude/skills/<name>/SKILL.md', '~/.claude/commands/<name>.md (Legacy)'],
-              multiRule: 'UNION + OVERRIDE (skills/ overrides commands/ on same name)',
-              detail: 'Both combine into available slash commands; if a skill and legacy command share the same name, skills/<name>/SKILL.md wins.'
+              paths: ['{{CLAUDE_MANAGED}}.claude/skills/<name>/SKILL.md (Enterprise)', '~/.claude/skills/<name>/SKILL.md (Personal)', '~/.claude/commands/<name>.md (Legacy)'],
+              multiRule: 'UNION + OVERRIDE (Enterprise > Personal > Project; skills/ > commands/)',
+              detail: 'Both skills and legacy commands combine into slash commands; skills/<name>/SKILL.md beats commands/<name>.md on name clash, and Personal beats Project.'
             },
             codex: {
-              paths: ['~/.codex/skills/<name>/SKILL.md (Native User)', '~/.agents/skills/<name>/SKILL.md (Cross-agent)', '~/.codex/prompts/<name>.md', '{{CODEX_ADMIN_SKILLS}} (Admin)'],
-              multiRule: 'UNION + OVERRIDE (User overrides Admin on same name)',
-              detail: 'Distinct skills combine into one pool; User skills shadow Admin skills on duplicate names. Note: ~/.codex/skills/ is Codex native home.{{WSL_HINT}}'
+              paths: ['~/.agents/skills/<name>/SKILL.md (User)', '{{CODEX_ADMIN_SKILLS}}<name>/SKILL.md (Admin)', '~/.codex/prompts/<name>.md (Legacy prompts)'],
+              multiRule: 'UNION POOL (Duplicates are NOT merged — both can appear in selectors)',
+              detail: 'Official user skill folder is ~/.agents/skills/. If two skills across scopes share the same name, Codex does not merge or shadow them—both can appear in skill selectors ($skill / /skills).{{WSL_HINT}}'
             },
             agy: {
               paths: ['~/.gemini/antigravity-cli/skills/ (CLI ONLY)', '~/.gemini/skills/ (CLI ONLY)', '~/.gemini/config/skills/<name>/SKILL.md (App + CLI)'],
@@ -581,29 +582,29 @@
             label: 'Project / Root',
             claude: {
               paths: ['<repo>/.claude/skills/<name>/SKILL.md', '<repo>/.claude/commands/<name>.md'],
-              multiRule: 'UNION + OVERRIDE (skills/ overrides commands/ on same name)',
-              detail: 'Identical in CLI & Desktop Code tab. Both combine and are checked into git for team workflows.'
+              multiRule: 'UNION + OVERRIDE (skills/ > commands/; Personal overrides Project)',
+              detail: 'Identical in CLI & Desktop Code tab. Checked into git for team workflows; note that a personal ~/.claude/skills/<name> shadows a same-named project skill.'
             },
             codex: {
               paths: ['<repo>/.agents/skills/<name>/SKILL.md'],
-              detail: 'Identical in CLI & Desktop App. Appends to global pool and overrides User/Admin skills on matching name.'
+              detail: 'Identical in CLI & Desktop App. Adds to the skill pool alongside User/Admin/System skills (duplicate names coexist rather than shadowing).'
             },
             agy: {
-              paths: ['people/<user>/.agents/skills/ (via .gemini/config.json, uses {{USER_VAR}})', '<repo>/.agents/skills/<name>/SKILL.md', 'Paths in <repo>/.agents/skills.json'],
-              multiRule: 'APPEND + OVERRIDE (skills.json appends; people/<user> overrides repo)',
-              detail: 'skills.json appends extra/nested folders to the 1-level .agents/skills/ scan; people/<user> overrides repo skills on name clash.'
+              paths: ['people/{user}/.agents/skills/ (via .gemini/config.json, uses {{USER_VAR}})', '<repo>/.agents/skills/<name>/SKILL.md', 'Paths in <repo>/.agents/skills.json'],
+              multiRule: 'APPEND + OVERRIDE (skills.json appends; people/{user} overrides repo)',
+              detail: 'skills.json appends extra/nested folders to the 1-level .agents/skills/ scan; people/{user} overrides repo skills on name clash.'
             }
           },
           {
             scope: 'directory',
             label: 'Subdirectory / CWD',
             claude: {
-              paths: ['<subdir>/.claude/skills/<name>/SKILL.md (Monorepo discovery)'],
-              detail: 'Identical in CLI & Desktop Code tab. Combines with project/global skills.'
+              paths: ['CWD up to repo root: Eager at startup', 'Child subdirs (<subdir>/.claude/skills/): Lazy ON DEMAND (coexists as /<subdir>:<name>)'],
+              detail: 'Walks up to repo root at startup; nested skills below CWD load once Claude reads/edits files there. Matching names coexist—/name runs root, /<subdir>:<name> runs nested.'
             },
             codex: {
               paths: ['<cwd-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
-              detail: 'Identical in CLI & Desktop App. Scans upward to repo root; closer CWD skill wins name clashes.'
+              detail: 'Identical in CLI & Desktop App. Scans .agents/skills upward from CWD to repo root; duplicate skill names are not merged (both can appear in selectors).'
             },
             agy: {
               paths: ['<workspace-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
@@ -614,14 +615,14 @@
             scope: 'resolution',
             label: 'Overwrite / Shadow',
             claude: {
-              badge: 'Union Pool | Project Shadows Global',
-              paths: ['1. Project (.claude/skills/)', '2. Global (~/.claude/skills/)', '3. Plugin Skills (namespaced)'],
-              detail: 'Identical in CLI & Desktop Code tab. Distinct names combine; Project overrides Global on identical skill name.'
+              badge: 'Union Pool | Enterprise > Personal > Project',
+              paths: ['1. Enterprise ({{CLAUDE_MANAGED}}.claude/skills/)', '2. Personal (~/.claude/skills/)', '3. Project (<repo>/.claude/skills/)', '4. Plugin Skills (namespaced <plugin>:<skill>)'],
+              detail: 'Identical in CLI & Desktop Code tab. Distinct names combine; Enterprise beats Personal, and Personal (~/.claude/skills/) shadows Project (.claude/skills/) on identical skill name.'
             },
             codex: {
-              badge: 'Union Pool | Repo > User > Admin > System',
-              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.codex/skills & ~/.agents/skills)', '3. Admin ({{CODEX_ADMIN_SKILLS}})', '4. System'],
-              detail: 'Identical in CLI & Desktop App. Distinct skills combine; repo-local wins name collisions.'
+              badge: 'Union Pool | Duplicates Coexist (No Shadowing)',
+              paths: ['Repo/CWD (.agents/skills/)', 'User (~/.agents/skills/)', 'Admin ({{CODEX_ADMIN_SKILLS}})', 'System (Bundled: skill-creator, skill-installer)'],
+              detail: 'Identical in CLI & Desktop App. Codex does not merge or shadow duplicate skill names across scopes—both can appear in selectors. Disable specific paths or names via [[skills.config]] in config.toml.'
             },
             agy: {
               badge: 'Personal-in-Repo > Workspace > Global Config > Built-in',
@@ -665,8 +666,8 @@
             label: 'Project / Root',
             claude: {
               paths: ['<repo>/.claude/settings.local.json (Personal / Gitignored)', '<repo>/.claude/settings.json (Team / VCS)'],
-              multiRule: 'OVERRIDES (Local > Shared: scalars/arrays replace, objects deep-merge)',
-              detail: 'Identical in CLI & Desktop Code tab. Local overrides Shared team settings—and remember arrays like permissions.allow replace completely.'
+              multiRule: 'OVERRIDES SCALARS | MERGES OBJECTS & LISTS (Local > Shared)',
+              detail: 'Identical in CLI & Desktop Code tab. Local overrides Shared scalars & deep-merges objects, while list keys like permissions.allow and claudeMdExcludes combine across scopes rather than wiping out global rules.'
             },
             codex: {
               paths: ['<repo>/.codex/config.toml (Trusted repos only)'],
@@ -683,8 +684,8 @@
             scope: 'directory',
             label: 'Subdirectory / CWD',
             claude: {
-              paths: ['None (Strictly Global + Project Root)'],
-              detail: 'Identical in CLI & Desktop Code tab—no subdirectory settings.json inheritance.'
+              paths: ['Shared .claude/settings.json: Read from CWD (no upward walk)', 'Local .claude/settings.local.json: Anchored at Git repo root (v2.1.211+)'],
+              detail: 'No recursive subdirectory inheritance. Start in repo root to load a committed root .claude/settings.json; personal .claude/settings.local.json is read/written at the git root.'
             },
             codex: {
               paths: ['Nested <dir>/.codex/config.toml (Trusted repos only)'],
@@ -699,14 +700,14 @@
             scope: 'resolution',
             label: 'Overwrite / Merge',
             claude: {
-              badge: 'Scalars Overwrite | Objects Deep-Merge | Arrays Replace',
-              paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. CLI Flags (CLI only)', '3. .claude/settings.local.json', '4. .claude/settings.json', '5. ~/.claude/settings.json'],
-              detail: 'Identical merge engine in CLI & Desktop Code tab. Arrays (like permissions.allow) replace rather than append.'
+              badge: 'Scalars Overwrite | Objects Deep-Merge | Lists Merge',
+              paths: ['1. Managed ({{CLAUDE_MANAGED_DIR}})', '2. CLI Flags / --settings (CLI only)', '3. .claude/settings.local.json', '4. .claude/settings.json', '5. ~/.claude/settings.json'],
+              detail: 'Identical merge engine in CLI & Desktop Code tab. List keys like permissions.allow and claudeMdExcludes combine across scopes (deny > ask > allow); only 4 model-list keys (fallbackModel, modelPicker, managed availableModels, modelSettings) do not merge.'
             },
             codex: {
-              badge: 'Key-Level Overwrite (Most Specific Wins)',
-              paths: ['1. CLI Flags -c (CLI only)', '2. Project .codex/config.toml', '3. Profile ~/.codex/<name>.config.toml', '4. Global ~/.codex/config.toml'],
-              detail: 'Identical config.toml precedence in CLI & Desktop App (GUI threads skip CLI-only -c flags).'
+              badge: 'Key-Level Overwrite (Most Specific Wins) + Admin requirements.toml',
+              paths: ['1. CLI Flags -c (CLI only)', '2. Project .codex/config.toml (Root -> CWD)', '3. Profile ~/.codex/<name>.config.toml', '4. Global ~/.codex/config.toml -> Cloud-managed -> System (/etc/codex/config.toml)'],
+              detail: 'Identical config.toml precedence in CLI & Desktop App (GUI skips CLI-only -c flags). Tables merge recursively; arrays replace wholesale. Admin requirements.toml enforces hard policy bounds.'
             },
             agy: {
               badge: 'CLI: Flags > settings.json | App: Project UI > Global UI',
@@ -723,23 +724,23 @@
       {
         id: 'claude-global-md',
         cli: 'claude',
-        path: '~/.claude/CLAUDE.md',
+        path: '~/.claude/CLAUDE.md & ~/.claude/rules/*.md',
         scope: 'Global User',
         type: 'Instructions (MD)',
-        behavior: 'Appended 1st (Eager at startup)',
+        behavior: 'Appended after Managed policy (Eager at startup)',
         git: 'Local Only',
-        summary: 'Personal baseline instructions injected into every repository.',
-        code: `# Personal Preferences\n- Prefer functional TypeScript patterns.\n- Always run tests before claiming a fix.`
+        summary: 'Personal baseline instructions and modular user rules injected into every repository before project rules.',
+        code: `# Personal Preferences (~/.claude/CLAUDE.md)\n- Prefer functional TypeScript patterns.\n- Always run tests before claiming a fix.`
       },
       {
         id: 'claude-subdir-md',
         cli: 'claude',
-        path: '<repo>/CLAUDE.md & <subdir>/CLAUDE.md',
-        scope: 'Root (Eager) + Subdir (Lazy)',
+        path: '<repo>/CLAUDE.md, .claude/rules/*.md & <subdir>/CLAUDE.md',
+        scope: 'Root (Eager) + Subdir / paths: Rules (Lazy)',
         type: 'Instructions (MD)',
-        behavior: 'Root eager; subdir lazy-loaded ONLY when files inside it are accessed',
+        behavior: 'Root eager; subdir CLAUDE[.local].md & paths:-scoped rules lazy-loaded ON DEMAND',
         git: 'CLAUDE.md Git | CLAUDE.local.md Ignored',
-        summary: 'Monorepo-friendly: child CLAUDE.md files cost 0 tokens at startup until Claude reads/edits inside that folder.',
+        summary: 'Monorepo-friendly: child CLAUDE.md files and paths:-scoped rules cost 0 tokens at startup until Claude touches matching files. Also falls back to AGENTS.md (v2.1.277+) when no CLAUDE.md exists.',
         code: `# Payments Package (packages/payments/CLAUDE.md)\n- Never log raw PAN or CVV fields.\n- Represent money as integer cents (BigInt).`
       },
       {
@@ -748,7 +749,7 @@
         path: '<repo>/.mcp.json & ~/.claude.json',
         scope: 'CLI & Desktop Code Tab',
         type: 'MCP Config (JSON)',
-        behavior: 'Local > Project > User; matching server name = full entry replace',
+        behavior: 'managedMcpServers > Local > Project > User (full block replace); managed-mcp.json = exclusive lock',
         git: '.mcp.json Git | ~/.claude.json Local',
         summary: 'Used by Claude Code CLI and Claude Desktop Code tab. User-global and private per-project ("Local") MCP servers live in ~/.claude.json; team-shared MCP servers live in <repo>/.mcp.json.',
         code: `// <repo>/.mcp.json\n{\n  "mcpServers": {\n    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres"],\n      "env": { "DATABASE_URL": "\${DATABASE_URL}" }\n    }\n  }\n}`
@@ -757,33 +758,33 @@
         id: 'claude-desktop-mcp',
         cli: 'claude',
         path: '{{CLAUDE_DESKTOP_MCP}}',
-        scope: 'Desktop Extra: Chat / Cowork Tabs',
-        type: 'Desktop Extra MCP (JSON)',
-        behavior: 'Non-coding Chat/Cowork MCP file (separate from Code tab & CLI)',
+        scope: 'App ≠ CLI: Desktop Code Tab + Chat / Cowork',
+        type: 'Desktop MCP Config (JSON)',
+        behavior: 'Loaded by Desktop local Code tab + Chat/Cowork; NOT read by standalone CLI',
         git: 'Local Machine Only',
-        summary: 'Additional info for non-coding Claude Desktop tabs (Chat / Cowork). The Desktop Code tab shares ~/.claude.json & .mcp.json with Claude Code CLI.',
+        summary: 'Claude Desktop loads servers here into both Chat/Cowork and local Code tab sessions (alongside ~/.claude.json & .mcp.json). Standalone CLI ignores this file—run `claude mcp add-from-claude-desktop` on macOS/WSL to import.',
         code: `{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{{SAMPLE_DOCS}}"]\n    }\n  }\n}`
       },
       {
         id: 'claude-skills',
         cli: 'claude',
-        path: '<repo>/.claude/skills/<name>/SKILL.md',
-        scope: 'Project & Global (~/.claude/skills/)',
+        path: '~/.claude/skills/ & <repo>/.claude/skills/<name>/SKILL.md',
+        scope: 'Enterprise, Personal, Project & Nested',
         type: 'Skill (MD)',
-        behavior: 'Project shadows Global on name collision',
-        git: 'Project Git | Global Local',
-        summary: 'On-demand workflows using progressive disclosure (only name & description in initial prompt).',
+        behavior: 'Enterprise > Personal (~/.claude/skills/) > Project (.claude/skills/) on name clash',
+        git: 'Project Git | Personal Local',
+        summary: 'On-demand workflows using progressive disclosure (only name & description upfront). Personal skills shadow same-named project skills; nested subdir skills coexist via /<subdir>:<name>.',
         code: `---\nname: release-check\ndescription: Run pre-release verification checks and changelog audit.\n---\n1. Run \`pnpm test:ci\`\n2. Verify CHANGELOG.md has an entry.`
       },
       {
         id: 'claude-settings',
         cli: 'claude',
         path: '~/.claude/settings.json & .claude/settings[.local].json',
-        scope: 'Global, Project & Local',
+        scope: 'Global, Project (CWD) & Local (Git Root)',
         type: 'Config (JSON)',
-        behavior: 'Scalars Overwrite | Objects Deep-Merge | Arrays Replace',
+        behavior: 'Scalars Overwrite | Objects Deep-Merge | Lists Merge (permissions.allow combines)',
         git: 'settings.json Git | .local.json Ignored',
-        summary: 'Controls model, permissions, hooks, and env vars. Remember: array keys like permissions.allow replace rather than append.',
+        summary: 'Controls model, permissions, hooks, and env vars. List keys like permissions.allow and claudeMdExcludes merge across scopes (deny > ask > allow); only 4 model-list keys do not merge.',
         code: `{\n  "model": "claude-sonnet-4-6",\n  "permissions": {\n    "allow": ["Read", "Edit", "Bash(pnpm test *)"]\n  }\n}`
       },
       {
@@ -801,22 +802,22 @@
         id: 'codex-mcp-config',
         cli: 'codex',
         path: '~/.codex/config.toml & <repo>/.codex/config.toml',
-        scope: 'Global, Profile & Trusted Project',
+        scope: 'Global, Profile, System & Trusted Project',
         type: 'MCP + Config (TOML)',
-        behavior: 'CLI > Nested/Root .codex/config.toml > Profile > Global; same server table replaces whole block',
+        behavior: 'CLI > Nested/Root .codex/config.toml > Profile > Global > System; tables deep-merge (arrays replace)',
         git: 'Project Git (Trusted) | Global Local',
-        summary: 'Single TOML file holds both runtime settings (model, sandbox_mode, project_doc_max_bytes) and [mcp_servers.<name>] tables.',
+        summary: 'Single TOML file holds both runtime settings (model, sandbox_mode, project_doc_max_bytes) and [mcp_servers.<name>] tables. Overlapping server tables merge keys recursively; arrays like args replace wholesale.',
         code: `model = "gpt-5-codex"\napproval_policy = "on-request"\nproject_doc_max_bytes = 65536\n\n[mcp_servers.linear]\nurl = "https://mcp.linear.app/mcp"\nbearer_token_env_var = "LINEAR_API_KEY"`
       },
       {
         id: 'codex-skills',
         cli: 'codex',
         path: '<cwd-to-repo>/.agents/skills/<name>/SKILL.md',
-        scope: 'Repo, User (~/.agents & ~/.codex), Admin',
+        scope: 'Repo, User (~/.agents/skills), Admin & System',
         type: 'Skill (MD)',
-        behavior: 'Repo > User > Admin > System on name collision',
+        behavior: 'Union pool — duplicate names are NOT merged; both can appear in selectors',
         git: '.agents/skills Git',
-        summary: 'Scans upward from CWD to repo root for .agents/skills/*/SKILL.md and merges with user/admin skills.',
+        summary: 'Scans upward from CWD to repo root for .agents/skills/*/SKILL.md plus ~/.agents/skills/ and Admin/System skills. Use [[skills.config]] in config.toml to disable duplicates by path or name.',
         code: `---\nname: db-migration\ndescription: Generate and verify SQL migrations safely.\n---\nRun \`./scripts/migrate-dry-run.sh\` before applying changes.`
       },
       {
@@ -1127,16 +1128,16 @@
         const simData = {
           claude: {
             title: 'Claude Code — Launch CWD: /repo/services/api',
-            ruleSummary: 'Stacks (appends) Managed -> User -> Root -> .claude/CLAUDE.md -> .claude/rules/*.md -> Local eagerly at startup (check via /memory). Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
+            ruleSummary: 'Stacks (appends) Managed -> User (CLAUDE.md + rules/) -> Root -> .claude/CLAUDE.md -> unconditional rules/*.md -> Local at startup (check via /context all). Subfolders below CWD and paths:-scoped rules are LAZY-LOADED on demand. Falls back to AGENTS.md (v2.1.277+) if no CLAUDE.md exists.',
             files: [
               { path: '{{CLAUDE_MANAGED}}CLAUDE.md', status: 'STARTUP (1st)', badge: 'Managed / Non-Excludable', desc: 'Org-wide baseline stacked first; cannot be skipped via claudeMdExcludes (appends, does not silence User/Project files).' },
-              { path: '~/.claude/CLAUDE.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Global personal baseline appended after Managed policy.' },
+              { path: '~/.claude/CLAUDE.md & ~/.claude/rules/*.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Global personal instructions & user rules appended after Managed policy (before project rules).' },
               { path: '/repo/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global.' },
               { path: '/repo/.claude/CLAUDE.md', status: 'STARTUP (4th)', badge: 'Eager Append', desc: 'Also loaded and appended directly after /repo/CLAUDE.md if both exist.' },
-              { path: '/repo/.claude/rules/*.md', status: 'STARTUP (5th)', badge: 'Eager Append', desc: 'Project modular rules append after .claude/CLAUDE.md and before CLAUDE.local.md.' },
+              { path: '/repo/.claude/rules/*.md', status: 'STARTUP / LAZY', badge: 'Eager (or paths: Lazy)', desc: 'Rules without paths: frontmatter load eagerly at startup; rules with YAML paths: globs load lazily when matching files are read/edited.' },
               { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (6th)', badge: 'Eager Append', desc: 'CWD instructions append and refine broader rules.' },
               { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (7th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after team rules and CWD CLAUDE.md.' },
-              { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Appended dynamically ONLY when Claude reads/edits a file under src/db/.' }
+              { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Appended dynamically ONLY when Claude reads/edits a file under src/db/ (same for nested CLAUDE.local.md).' }
             ]
           },
           codex: {
@@ -1196,7 +1197,7 @@
             rightTitle: 'Project (<repo>/.mcp.json)',
             rightCode: `{\n  "mcpServers": {\n    "db": {\n      "command": "npx",\n      "args": ["mcp-pg", "--readonly"],\n      "env": { "DATABASE_URL": "\${DB_URL}" }\n    },\n    "sentry": { "url": "https://mcp.sentry.dev/mcp" }\n  }\n}`,
             resultTitle: 'Effective MCP Pool (Claude Code)',
-            resultCode: `// Distinct servers UNION; same key REPLACES entire block!\n- github  -> from User (~/.claude.json)\n- sentry  -> from Project (.mcp.json)\n- db      -> COMPLETELY REPLACED by Project (.mcp.json)\n             // PG_USER="dev" is NOT inherited (no deep-merge!)\n\n// Note: A "Local" entry for "db" inside ~/.claude.json\n// under this project path would beat .mcp.json.`
+            resultCode: `// Distinct servers UNION; same key REPLACES entire block!\n- github  -> from User (~/.claude.json)\n- sentry  -> from Project (.mcp.json)\n- db      -> COMPLETELY REPLACED by Project (.mcp.json)\n             // PG_USER="dev" is NOT inherited (no deep-merge!)\n\n// Notes:\n// - Local entry in ~/.claude.json (under project path) beats .mcp.json.\n// - managed-mcp.json locks out ALL user/project servers (exclusive);\n//   managedMcpServers in managed-settings.json adds org servers.\n// - Desktop local Code tab also loads claude_desktop_config.json.`
           },
           codex: {
             leftTitle: 'Global (~/.codex/config.toml)',
@@ -1204,7 +1205,7 @@
             rightTitle: 'Trusted Project (.codex/config.toml)',
             rightCode: `[mcp_servers.db]\ncommand = "npx"\nargs = ["-y", "mcp-pg", "--readonly"]\n\n[mcp_servers.linear]\nurl = "https://mcp.linear.app/mcp"\nbearer_token_env_var = "LINEAR_KEY"`,
             resultTitle: 'Effective MCP Pool (Codex CLI)',
-            resultCode: `# Only applies if repo is marked TRUSTED:\n- github -> preserved from Global ~/.codex/config.toml\n- linear -> added from Project .codex/config.toml\n- db     -> ENTIRE [mcp_servers.db] table replaced by Project\n            # env.PG_USER is NOT merged from Global!\n\n# Untrusted repo? Project .codex/config.toml is ignored.`
+            resultCode: `# Only applies if repo is marked TRUSTED:\n- github -> preserved from Global ~/.codex/config.toml\n- linear -> added from Project .codex/config.toml\n- db     -> TABLES DEEP-MERGE by key across layers:\n            args = ["-y", "mcp-pg", "--readonly"]  # Array REPLACED\n            env.PG_USER = "dev"                    # Inherited from Global!\n\n# Untrusted repo? Project .codex/config.toml is ignored.`
           },
           agy: {
             leftTitle: 'Global (~/.gemini/config/mcp_config.json)',
@@ -1233,20 +1234,21 @@
       } else if (activeSimScenario === 'skills') {
         const skillLadder = {
           claude: {
-            note: 'When multiple scopes define a skill named "deploy", Claude Code resolves in this order:',
+            note: 'When multiple scopes define a skill named "deploy", Claude Code resolves /deploy in this order:',
             steps: [
-              { rank: '1 (WINS)', scope: 'Project Skill', path: '<repo>/.claude/skills/deploy/SKILL.md', note: 'Shadows personal global skill of the same name.' },
-              { rank: '2', scope: 'Global User Skill', path: '~/.claude/skills/deploy/SKILL.md', note: 'Fallback across projects without their own deploy skill.' },
+              { rank: '1 (WINS)', scope: 'Enterprise Skill', path: '{{CLAUDE_MANAGED}}.claude/skills/deploy/SKILL.md', note: 'Org-deployed skill takes top priority over Personal and Project.' },
+              { rank: '2', scope: 'Personal Global Skill', path: '~/.claude/skills/deploy/SKILL.md', note: 'Shadows project-level .claude/skills/deploy/ on identical name!' },
+              { rank: '3', scope: 'Project Skill', path: '<repo>/.claude/skills/deploy/SKILL.md', note: 'Team-committed skill; yields to Enterprise and Personal on name clash. (Nested <subdir>/.claude/skills/deploy/ coexists as /<subdir>:deploy.)' },
               { rank: 'Namespaced', scope: 'Plugin Skill', path: 'plugin-name:deploy', note: 'Namespaced so it does not collide.' }
             ]
           },
           codex: {
-            note: 'When multiple scopes define a skill named "deploy", Codex CLI resolves in this order:',
+            note: 'When multiple scopes define a skill named "deploy", Codex does NOT merge or shadow them—both can appear in skill selectors ($deploy / /skills):',
             steps: [
-              { rank: '1 (WINS)', scope: 'Repo / CWD Skill', path: '<cwd-up-to-repo>/.agents/skills/deploy/SKILL.md', note: 'Project-local skill wins over user, admin, and system.' },
-              { rank: '2', scope: 'User Global Skill', path: '~/.agents/skills/deploy/ or ~/.codex/skills/deploy/', note: 'Personal fallback across repos.' },
-              { rank: '3', scope: 'Admin Skill', path: '{{CODEX_ADMIN_SKILLS}}deploy/SKILL.md', note: 'Machine-wide admin provisioned skill.' },
-              { rank: '4', scope: 'System Bundled', path: '<bundled-with-codex>', note: 'Lowest priority default skill.' }
+              { rank: 'Coexists', scope: 'Repo / CWD Skill', path: '<cwd-up-to-repo>/.agents/skills/deploy/SKILL.md', note: 'Discovered walking upward from CWD to repo root.' },
+              { rank: 'Coexists', scope: 'User Global Skill', path: '~/.agents/skills/deploy/SKILL.md', note: 'Personal user skill; appears alongside repo skill rather than being shadowed.' },
+              { rank: 'Coexists', scope: 'Admin Skill', path: '{{CODEX_ADMIN_SKILLS}}deploy/SKILL.md', note: 'Machine-wide admin provisioned skill (Unix: /etc/codex/skills/).' },
+              { rank: 'Coexists', scope: 'System Bundled', path: '<bundled-with-codex> (e.g. skill-creator, skill-installer)', note: 'Disable any specific path or name via [[skills.config]] in config.toml.' }
             ]
           },
           agy: {
@@ -1286,19 +1288,19 @@
             rightTitle: 'Project (<repo>/.claude/settings.json)',
             rightCode: `{\n  "model": "claude-sonnet-4-6",\n  "env": {\n    "LOG_LEVEL": "debug"\n  },\n  "permissions": {\n    "allow": ["Bash(npm test)"]\n  }\n}`,
             resultTitle: 'Effective Config (Claude Code)',
-            resultCode: `{\n  "model": "claude-sonnet-4-6",   // Scalar: OVERWRITTEN\n  "env": {\n    "AWS_REGION": "us-east-1",    // Object: DEEP-MERGED\n    "LOG_LEVEL": "debug"          // Key overwritten\n  },\n  "permissions": {\n    "allow": ["Bash(npm test)"]   // Array: REPLACED! (Global lost!)\n  }\n}`
+            resultCode: `{\n  "model": "claude-sonnet-4-6",   // Scalar: OVERWRITTEN\n  "env": {\n    "AWS_REGION": "us-east-1",    // Object: DEEP-MERGED\n    "LOG_LEVEL": "debug"          // Key overwritten\n  },\n  "permissions": {\n    "allow": [                    // List: MERGED across scopes!\n      "Read", "Grep", "Bash(git status)", "Bash(npm test)"\n    ]\n  }\n}`
           },
           codex: {
             leftTitle: 'Global (~/.codex/config.toml)',
-            leftCode: `model = "gpt-5-codex"\napproval_policy = "untrusted"\nproject_doc_max_bytes = 32768`,
+            leftCode: `model = "gpt-5-codex"\napproval_policy = "on-request"\nsandbox_mode = "read-only"\nproject_doc_max_bytes = 32768`,
             rightTitle: 'Project (<repo>/.codex/config.toml)',
-            rightCode: `approval_policy = "on-request"\nproject_doc_max_bytes = 65536`,
+            rightCode: `sandbox_mode = "workspace-write"\nproject_doc_max_bytes = 65536`,
             resultTitle: 'Effective Config (Codex CLI)',
-            resultCode: `model = "gpt-5-codex"          # Inherited from Global\napproval_policy = "on-request" # Overwritten by Project\nproject_doc_max_bytes = 65536  # Overwritten by Project\n# (CLI flags -c beat both)`
+            resultCode: `model = "gpt-5-codex"              # Inherited from Global\napproval_policy = "on-request"     # Inherited from Global\nsandbox_mode = "workspace-write"   # Overwritten by Project\nproject_doc_max_bytes = 65536      # Overwritten by Project\n# (CLI flags -c beat both; requirements.toml enforces bounds)`
           },
           agy: {
             leftTitle: 'Global (~/.gemini/antigravity-cli/settings.json)',
-            leftCode: `{\n  "agentMode": "default",\n  "verbosity": "medium"\n}\n// + ~/.gemini/config/skills.json:\n// entries: ["{{TEAM_SHARED}}"]`,
+            leftCode: `{\n  "agentMode": "default",\n  "verbosity": "medium"\n}\n// + ~/.gemini/config/skills.json:\n// "entries": [{ "path": "{{TEAM_SHARED}}" }]`,
             rightTitle: 'CLI Flag + Project Manifest',
             rightCode: `// Launch: agy --mode auto\n// <repo>/.agents/skills.json:\n{\n  "entries": [{ "path": "tools/skills" }],\n  "exclude": ["legacy-deploy"]\n}`,
             resultTitle: 'Effective Config (Antigravity CLI)',
@@ -1419,12 +1421,12 @@
               body: `<code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_MANAGED}}CLAUDE.md')}</code> <strong>appends first</strong> (does not silence User/Project files) and cannot be bypassed via <code class="text-[var(--code-foreground)]">claudeMdExcludes</code>. Child <code class="text-[var(--code-foreground)]">${escLoc('pkg/CLAUDE.md')}</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">${escLoc('pkg/')}</code>.`
             },
             {
-              heading: '2. MCP Name Clash = Full Replacement',
-              body: `In CLI &amp; Desktop <strong>Code tab</strong>: Local (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude.json')}</code> project entry) &gt; Project (<code class="text-[var(--code-foreground)]">.mcp.json</code>) &gt; User (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude.json')}</code>). Same server name replaces the entire block—no deep-merging of <code class="text-[var(--code-foreground)]">env</code> or <code class="text-[var(--code-foreground)]">args</code>. <span class="italic">(Desktop Extra: non-coding Chat/Cowork tabs read <code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_DESKTOP_MCP}}')}</code> instead.)</span>`
+              heading: '2. MCP Replacement, Exclusive managed-mcp.json & Desktop App Delta',
+              body: `<code class="text-[var(--code-foreground)]">managed-mcp.json</code> is <strong>exclusive</strong> (blocks user/project servers); use <code class="text-[var(--code-foreground)]">managedMcpServers</code> for additive org servers. Otherwise Local (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude.json')}</code>) &gt; Project (<code class="text-[var(--code-foreground)]">.mcp.json</code>) &gt; User (full block replace, no deep-merge). <strong>App ≠ CLI:</strong> Desktop local Code tab also loads <code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_DESKTOP_MCP}}')}</code>; standalone CLI does not.`
             },
             {
-              heading: '3. settings.json Arrays Replace, Not Append',
-              body: `Defining <code class="text-[var(--code-foreground)]">permissions.allow</code> in project <code class="text-[var(--code-foreground)]">${escLoc('.claude/settings.json')}</code> <strong>wipes out</strong> your global allow array instead of appending. Managed enterprise policies live in <code class="text-[var(--code-foreground)] path-chip">${escLoc('{{CLAUDE_MANAGED_DIR}}')}</code>.`
+              heading: '3. settings.json Lists Merge + Personal Skills Beat Project',
+              body: `List keys like <code class="text-[var(--code-foreground)]">permissions.allow</code> and <code class="text-[var(--code-foreground)]">claudeMdExcludes</code> <strong>combine across scopes</strong> (<code class="text-[var(--code-foreground)]">deny</code> &gt; <code class="text-[var(--code-foreground)]">ask</code> &gt; <code class="text-[var(--code-foreground)]">allow</code>), so project allow rules add onto your global rules rather than narrowing them. On skill name clashes, <strong>Enterprise &gt; Personal (<code class="text-[var(--code-foreground)]">${escLoc('~/.claude/skills/')}</code>) &gt; Project</strong>.`
             }
           ]
         },
@@ -1441,8 +1443,8 @@
               body: `Combined <code class="text-[var(--code-foreground)]">AGENTS.md</code> chain stops silently at <code class="text-[var(--code-foreground)]">project_doc_max_bytes</code> (32 KiB default) unless raised in shared <code class="text-[var(--code-foreground)]">config.toml</code>.`
             },
             {
-              heading: '3. Shared Harness & Repo Trust Gate',
-              body: `Changes to <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.codex/config.toml')}</code> (<code class="text-[var(--code-foreground)]">${escLoc('{{CODEX_HOME_VAR}}')}</code>), <code class="text-[var(--code-foreground)]">[mcp_servers.*]</code>, and <code class="text-[var(--code-foreground)]">${escLoc('.agents/skills/')}</code> apply identically to CLI &amp; Desktop App. Project MCP requires marking the repo trusted.${escLoc('{{WSL_HINT}}')}`
+              heading: '3. Deep-Merged TOML Tables, Repo Trust Gate & Coexisting Skills',
+              body: `Changes to <code class="text-[var(--code-foreground)] path-chip">${escLoc('~/.codex/config.toml')}</code> (<code class="text-[var(--code-foreground)]">${escLoc('{{CODEX_HOME_VAR}}')}</code>), <code class="text-[var(--code-foreground)]">[mcp_servers.*]</code> (tables deep-merge by key; arrays replace), and <code class="text-[var(--code-foreground)]">${escLoc('.agents/skills/')}</code> apply identically to CLI &amp; App. Project <code class="text-[var(--code-foreground)]">.codex/</code> requires repo trust, and duplicate skill names coexist in selectors rather than shadowing.${escLoc('{{WSL_HINT}}')}`
             }
           ]
         },
