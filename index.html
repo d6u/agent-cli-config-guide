@@ -106,7 +106,7 @@
             Claude Code vs. Codex vs. Antigravity (CLI &amp; Desktop App)
           </h1>
           <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1 max-w-3xl leading-relaxed">
-            Locations, scope walks, and overwrite vs. append semantics for <strong>Instructions</strong>, <strong>MCP</strong>, <strong>Skills</strong>, and <strong>Configs</strong>. Each CLI &amp; Desktop App is unified (<code class="text-[var(--code-foreground)]">CLI = App</code>) unless an explicit <code class="text-[var(--code-foreground)]">App ≠ CLI</code> delta is noted.
+            Focused on the <strong>coding agent</strong> workflow across <strong>Instructions</strong>, <strong>MCP</strong>, <strong>Skills</strong>, and <strong>Configs</strong>. Each CLI &amp; Desktop coding surface is unified (<code class="text-[var(--code-foreground)]">CLI = App</code>) unless coding-agent behavior diverges (<code class="text-[var(--code-foreground)]">App ≠ CLI</code>); extra Desktop-only features (Chat, Cowork, Routines, UI) are listed as <em>Desktop Extras</em>.
           </p>
         </div>
 
@@ -297,8 +297,8 @@
               Root &amp; ancestor <code class="text-[var(--code-foreground)]">CLAUDE.md</code> load eagerly in CLI &amp; Desktop Code tab. Child <code class="text-[var(--code-foreground)]">pkg/CLAUDE.md</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">pkg/</code>.
             </li>
             <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
-              <strong class="text-[var(--foreground)] block mb-1">2. Desktop Chat MCP ≠ Claude Code MCP</strong>
-              CLI &amp; Desktop <strong>Code tab</strong> use <code class="text-[var(--code-foreground)]">~/.claude.json</code> + <code class="text-[var(--code-foreground)]">.mcp.json</code> (name clash = full block replace). Claude Desktop <strong>Chat/Cowork</strong> uses <code class="text-[var(--code-foreground)]">claude_desktop_config.json</code> instead!
+              <strong class="text-[var(--foreground)] block mb-1">2. MCP Name Clash = Full Replacement</strong>
+              In CLI &amp; Desktop <strong>Code tab</strong>: Local (<code class="text-[var(--code-foreground)]">~/.claude.json</code> project entry) &gt; Project (<code class="text-[var(--code-foreground)]">.mcp.json</code>) &gt; User (<code class="text-[var(--code-foreground)]">~/.claude.json</code>). Same server name replaces the entire block—no deep-merging of <code class="text-[var(--code-foreground)]">env</code> or <code class="text-[var(--code-foreground)]">args</code>. <span class="italic">(Desktop Extra: non-coding Chat/Cowork tabs read <code class="text-[var(--code-foreground)]">claude_desktop_config.json</code> instead.)</span>
             </li>
             <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
               <strong class="text-[var(--foreground)] block mb-1">3. settings.json Arrays Replace, Not Append</strong>
@@ -368,8 +368,8 @@
             label: 'Global / User',
             claude: {
               paths: ['~/.claude/CLAUDE.md', '/etc/claude-code/CLAUDE.md (Managed)'],
-              detail: 'Shared by CLI & Desktop Code tab as your personal coding baseline across all repos.',
-              appDelta: 'Desktop Chat/Cowork tabs do not auto-load CLAUDE.md—only the Code tab (and CLI) does.'
+              detail: 'Identical across CLI & Desktop Code tab as your personal coding baseline across all repos.',
+              extraInfo: 'Desktop Chat/Cowork tabs (non-coding workflows) do not auto-load CLAUDE.md.'
             },
             codex: {
               paths: ['~/.codex/AGENTS.override.md (if present)', '~/.codex/AGENTS.md (fallback)'],
@@ -410,8 +410,8 @@
             },
             agy: {
               paths: ['Every dir walking UP from workspace folder to <repo-root>: AGENTS.md, GEMINI.md, .agents/rules/*.md'],
-              detail: 'Both walk UP to repo root and never load rules from subfolders below the workspace folder.',
-              appDelta: 'App checks every folder added to a Project (multi-folder projects); CLI checks launch CWD + --add-dir / /add-dir.'
+              detail: 'Identical walk rule in App & CLI (walks UP to repo root; never loads below workspace folder).',
+              extraInfo: 'Workspace root = folders added to a Project in App, or launch CWD + --add-dir / /add-dir in CLI.'
             }
           },
           {
@@ -444,9 +444,9 @@
             scope: 'global',
             label: 'Global / User',
             claude: {
-              paths: ['~/.claude.json (CLI & Desktop Code tab)', '/etc/claude-code/managed-mcp.json (Enterprise)'],
-              detail: 'User-scoped Claude Code servers live under top-level "mcpServers" in ~/.claude.json.',
-              appDelta: 'Claude Desktop (Chat/Cowork) reads a separate file: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows).'
+              paths: ['~/.claude.json (top-level "mcpServers")', '/etc/claude-code/managed-mcp.json (Enterprise)'],
+              detail: 'Identical across CLI & Desktop Code tab for user-scoped personal coding MCP servers.',
+              extraInfo: 'Desktop Chat/Cowork tabs use a separate config file: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows).'
             },
             codex: {
               paths: ['~/.codex/config.toml ([mcp_servers.<name>])'],
@@ -454,8 +454,8 @@
             },
             agy: {
               paths: ['~/.gemini/config/mcp_config.json ("mcpServers")', '~/.gemini/config/plugins/<name>/mcp_config.json'],
-              detail: 'Shared by Antigravity App, IDE, and CLI. Supports stdio (command) & Streamable HTTP (serverUrl/url).',
-              appDelta: 'App renders MCP Apps (ui:// interactive HTML panes) & GUI Customizations > MCP Servers; CLI runs tools as plain text & manages via /mcp.'
+              detail: 'Identical config schema & files across Antigravity App, IDE, and CLI (stdio + Streamable HTTP).',
+              extraInfo: 'App adds interactive MCP Apps (ui:// HTML views) & GUI Customizations > MCP Servers; CLI runs the same tools as plain text via /mcp.'
             }
           },
           {
@@ -597,18 +597,19 @@
             label: 'Global / User',
             claude: {
               paths: ['~/.claude/settings.json', '/etc/claude-code/managed-settings.json (Enterprise)'],
-              detail: 'Shared by CLI & Desktop Code tab for default model, permissions, hooks, and env vars.',
-              appDelta: 'Claude Desktop GUI preferences (window, theme, Chat/Cowork toggles) live in Desktop App UI settings.'
+              detail: 'Identical across CLI & Desktop Code tab for default model, permissions, hooks, and env vars.',
+              extraInfo: 'Non-coding Desktop App preferences (window, appearance, Chat/Cowork/Routines toggles) are managed in Desktop UI settings.'
             },
             codex: {
               paths: ['~/.codex/config.toml ($CODEX_HOME/config.toml)', '~/.codex/<profile>.config.toml'],
-              detail: 'Shared by CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.',
-              appDelta: 'Desktop App adds visual multi-thread orchestration, worktree switching & Agent Security UI on top of shared config.toml.'
+              detail: 'Identical across CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.',
+              extraInfo: 'Desktop App layers multi-thread orchestration, worktree switching, automations, and Agent Security UI on top of shared config.toml.'
             },
             agy: {
               paths: ['CLI: ~/.gemini/antigravity-cli/settings.json (Sparse JSON)', 'App: Settings UI (Cmd+,) Global Preferences', 'Shared: ~/.gemini/config/hooks.json & *.json manifests'],
               detail: 'Hooks & discovery manifests ({skills,rules,agents,plugins}.json) are shared across both surfaces.',
-              appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo), Interface Layout (SWE vs Knowledge Work), Browser & Orchestrator/Executor models in UI.'
+              appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo) & models in App UI.',
+              extraInfo: 'App UI also configures Desktop-only features: Interface Layout (Software Engineering vs Knowledge Work), Browser actuation, and Orchestrator/Executor model split.'
             }
           },
           {
@@ -706,11 +707,11 @@
         id: 'claude-desktop-mcp',
         cli: 'claude',
         path: '~/Library/Application Support/Claude/claude_desktop_config.json',
-        scope: 'Claude Desktop App (Chat / Cowork)',
-        type: 'Desktop MCP Config (JSON)',
-        behavior: 'Separate from ~/.claude.json & .mcp.json (App ≠ CLI)',
+        scope: 'Desktop Extra: Chat / Cowork Tabs',
+        type: 'Desktop Extra MCP (JSON)',
+        behavior: 'Non-coding Chat/Cowork MCP file (separate from Code tab & CLI)',
         git: 'Local Machine Only',
-        summary: 'Exclusively configures local MCP servers for Claude Desktop Chat/Cowork tabs (on Windows: %APPDATA%\\Claude\\claude_desktop_config.json). Not read by Claude Code CLI.',
+        summary: 'Additional info for non-coding Claude Desktop tabs (Chat / Cowork). On Windows: %APPDATA%\\Claude\\claude_desktop_config.json. The Desktop Code tab shares ~/.claude.json & .mcp.json with Claude Code CLI.',
         code: `{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/docs"]\n    }\n  }\n}`
       },
       {
@@ -922,12 +923,16 @@
       const deltaHtml = data.appDelta
         ? `<div class="mt-2 p-2 rounded-md border border-dashed border-[var(--border)] bg-[var(--card)] text-[11px] leading-snug text-[var(--foreground)]"><span class="font-mono font-bold uppercase text-[10px] mr-1">App ≠ CLI:</span>${esc(data.appDelta)}</div>`
         : '';
+      const extraHtml = data.extraInfo
+        ? `<div class="mt-1.5 px-2 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--secondary)] text-[11px] leading-snug text-[var(--muted-foreground)]"><span class="font-mono font-semibold uppercase text-[10px] text-[var(--foreground)] mr-1">Desktop Extra:</span>${esc(data.extraInfo)}</div>`
+        : '';
       return `
         <div class="space-y-1.5 min-w-0">
           ${badgeHtml}
           <ul class="space-y-1">${pathsHtml}</ul>
           <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${esc(data.detail)}</p>
           ${deltaHtml}
+          ${extraHtml}
         </div>
       `;
     }
