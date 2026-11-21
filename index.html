@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLI &amp; Desktop App Config Architecture — Claude, Codex, Antigravity</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .path-chip {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    button { cursor: pointer; touch-action: manipulation; }
+  </style>
+  <!-- Hydrate crisp Wireframe theme immediately before first paint when opened directly in a browser (outside Antigravity host) -->
+  <script>
+    window.__STANDALONE_THEMES = {
+      wireframe: {
+        '--background': '#fafafa',
+        '--card': '#ffffff',
+        '--border': '#18181b',
+        '--card-border': '#d4d4d8',
+        '--foreground': '#09090b',
+        '--muted-foreground': '#52525b',
+        '--code-foreground': '#1d4ed8',
+        '--primary': '#18181b',
+        '--primary-foreground': '#ffffff',
+        '--secondary': '#f4f4f5',
+        '--secondary-foreground': '#18181b',
+        '--surface-subtle': '#f4f4f5'
+      },
+      light: {
+        '--background': '#f8fafc',
+        '--card': '#ffffff',
+        '--border': '#cbd5e1',
+        '--card-border': '#e2e8f0',
+        '--foreground': '#0f172a',
+        '--muted-foreground': '#475569',
+        '--code-foreground': '#1d4ed8',
+        '--primary': '#2563eb',
+        '--primary-foreground': '#ffffff',
+        '--secondary': '#eff6ff',
+        '--secondary-foreground': '#1e40af',
+        '--surface-subtle': '#f1f5f9'
+      },
+      dark: {
+        '--background': '#0b0f19',
+        '--card': '#111827',
+        '--border': '#334155',
+        '--card-border': '#1f2937',
+        '--foreground': '#f8fafc',
+        '--muted-foreground': '#94a3b8',
+        '--code-foreground': '#93c5fd',
+        '--primary': '#3b82f6',
+        '--primary-foreground': '#ffffff',
+        '--secondary': '#1e293b',
+        '--secondary-foreground': '#e2e8f0',
+        '--surface-subtle': '#0f172a'
+      }
+    };
+    (function hydrateEarly() {
+      const hostPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+      window.__IS_STANDALONE = !hostPrimary;
+      if (window.__IS_STANDALONE) {
+        const saved = (function () { try { return localStorage.getItem('cli-guide-theme'); } catch (_) { return null; } })();
+        const initial = (saved && window.__STANDALONE_THEMES[saved]) ? saved : 'wireframe';
+        window.__ACTIVE_THEME = initial;
+        const tokens = window.__STANDALONE_THEMES[initial];
+        Object.entries(tokens).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
+      }
+    })();
+  </script>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased m-0 p-2.5 sm:p-5 md:p-6">
+  <div class="w-full max-w-6xl mx-auto space-y-3.5 sm:space-y-5 min-w-0">
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4 min-w-0">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center justify-between sm:justify-start gap-2 mb-2">
+            <span class="inline-flex items-center text-[10px] sm:text-[11px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">
+              CLI + Desktop App Reference
+            </span>
+            <!-- Standalone Browser Theme Switcher (auto-hidden inside Antigravity host) -->
+            <div id="standalone-theme-switcher" class="hidden items-center gap-0.5 text-[10px] sm:text-[11px] font-mono bg-[var(--background)] border border-[var(--card-border)] rounded-md p-0.5">
+              <button onclick="applyStandaloneTheme('wireframe')" id="theme-btn-wireframe" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors">Wireframe</button>
+              <button onclick="applyStandaloneTheme('light')" id="theme-btn-light" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors">Light</button>
+              <button onclick="applyStandaloneTheme('dark')" id="theme-btn-dark" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors">Dark</button>
+            </div>
+          </div>
+          <h1 class="text-base sm:text-2xl font-bold tracking-tight text-[var(--foreground)] leading-snug">
+            Claude Code vs. Codex vs. Antigravity (CLI &amp; Desktop App)
+          </h1>
+          <p class="text-xs sm:text-sm text-[var(--muted-foreground)] mt-1 max-w-3xl leading-relaxed">
+            Locations, scope walks, and overwrite vs. append semantics for <strong>Instructions</strong>, <strong>MCP</strong>, <strong>Skills</strong>, and <strong>Configs</strong>. Each CLI &amp; Desktop App is unified (<code class="text-[var(--code-foreground)]">CLI = App</code>) unless an explicit <code class="text-[var(--code-foreground)]">App ≠ CLI</code> delta is noted.
+          </p>
+        </div>
+
+        <!-- Primary Navigation Tabs: 4-col grid on mobile, inline pill bar on desktop -->
+        <nav class="w-full lg:w-auto grid grid-cols-4 lg:flex gap-1 bg-[var(--background)] p-1 rounded-lg border border-[var(--card-border)] shrink-0">
+          <button onclick="switchMainTab('matrix')" id="tab-btn-matrix" class="px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] text-center truncate">
+            <span class="hidden sm:inline">1. </span>Matrix
+          </button>
+          <button onclick="switchMainTab('simulator')" id="tab-btn-simulator" class="px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-center truncate">
+            <span class="hidden sm:inline">2. </span>Simulator
+          </button>
+          <button onclick="switchMainTab('tree')" id="tab-btn-tree" class="px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-center truncate">
+            <span class="hidden sm:inline">3. </span>Files
+          </button>
+          <button onclick="switchMainTab('gotchas')" id="tab-btn-gotchas" class="px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-center truncate">
+            <span class="hidden sm:inline">4. </span>Gotchas
+          </button>
+        </nav>
+      </div>
+
+      <!-- Compact 4-Pillar Mental Model Strip (2x2 on mobile, 4-col on desktop) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mt-3.5 pt-3 border-t border-[var(--card-border)]">
+        <button onclick="jumpToPillar('instructions')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <span class="text-xs font-bold text-[var(--foreground)]">1. Instructions</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Append</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug path-chip">
+            <code class="text-[var(--code-foreground)]">CLAUDE.md</code> / <code class="text-[var(--code-foreground)]">AGENTS.md</code> / <code class="text-[var(--code-foreground)]">GEMINI.md</code> concatenate across scopes.
+          </p>
+        </button>
+
+        <button onclick="jumpToPillar('mcp')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <span class="text-xs font-bold text-[var(--foreground)]">2. MCP Servers</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union + Replace</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
+            Distinct servers combine; matching key replaces the entire block.
+          </p>
+        </button>
+
+        <button onclick="jumpToPillar('skills')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <span class="text-xs font-bold text-[var(--foreground)]">3. Skills</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Union + Shadow</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
+            Progressive disclosure (<code class="text-[var(--code-foreground)]">SKILL.md</code>); higher scope shadows duplicates.
+          </p>
+        </button>
+
+        <button onclick="jumpToPillar('configs')" class="min-w-0 text-left p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--border)] transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <span class="text-xs font-bold text-[var(--foreground)]">4. Configs</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] w-fit">Overwrite</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-1 leading-snug">
+            JSON/TOML preferences &amp; permissions; specific scopes override.
+          </p>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==================== TAB 1: COMPARISON MATRIX ==================== -->
+    <section id="tab-matrix" class="w-full min-w-0 space-y-3 sm:space-y-4">
+      <!-- Compact Filter Bar -->
+      <div class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 space-y-2.5">
+        <!-- Row 1: Pillar Pills (wrap cleanly on mobile so all 4 pillars stay visible) -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] mr-0.5">Pillar:</span>
+          <button onclick="setMatrixPillar('all')" id="pillar-all" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">All (4)</button>
+          <button onclick="setMatrixPillar('instructions')" id="pillar-instructions" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">1. Instructions</button>
+          <button onclick="setMatrixPillar('mcp')" id="pillar-mcp" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">2. MCP</button>
+          <button onclick="setMatrixPillar('skills')" id="pillar-skills" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">3. Skills</button>
+          <button onclick="setMatrixPillar('configs')" id="pillar-configs" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">4. Configs</button>
+        </div>
+
+        <!-- Row 2: Ecosystem Focus + Scope Dropdown + App Delta Filter -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[var(--card-border)]">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] mr-0.5">Tool:</span>
+            <button onclick="setMatrixCli('all')" id="mcli-all" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">All 3</button>
+            <button onclick="setMatrixCli('claude')" id="mcli-claude" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Claude</button>
+            <button onclick="setMatrixCli('codex')" id="mcli-codex" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Codex</button>
+            <button onclick="setMatrixCli('agy')" id="mcli-agy" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">AGY</button>
+            <button onclick="toggleDeltaOnly()" id="delta-only-btn" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-mono font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">App ≠ CLI Only</button>
+          </div>
+          <div class="flex items-center gap-2 min-w-0">
+            <label for="scope-filter" class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] shrink-0">Scope:</label>
+            <select id="scope-filter" onchange="renderMatrix()" class="flex-1 sm:flex-none min-w-0 bg-[var(--background)] text-[var(--foreground)] border border-[var(--card-border)] rounded-md px-2 py-1 text-xs font-medium">
+              <option value="all">All Scopes &amp; Precedence</option>
+              <option value="global">Global / User Level</option>
+              <option value="project">Project / Repo Root</option>
+              <option value="directory">Subdirectory / CWD</option>
+              <option value="resolution">Overwrite vs. Append Order</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrix Cards Container -->
+      <div id="matrix-container" class="w-full min-w-0 space-y-3.5 sm:space-y-4"></div>
+    </section>
+
+    <!-- ==================== TAB 2: MERGE & PRECEDENCE SIMULATOR ==================== -->
+    <section id="tab-simulator" class="hidden w-full min-w-0 space-y-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 sm:p-5 space-y-4">
+        <div class="space-y-3 border-b border-[var(--card-border)] pb-4">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-[var(--foreground)]">Interactive Resolution &amp; Merge Simulator</h2>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
+              Pick a scenario and CLI engine to trace exact file discovery, overwrites, and effective output.
+            </p>
+          </div>
+
+          <!-- Scenario Selector (2x2 on mobile, inline on desktop) -->
+          <div class="grid grid-cols-2 md:flex md:flex-wrap gap-1.5">
+            <button onclick="setSimScenario('instructions')" id="sim-scen-instructions" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left sm:text-center bg-[var(--primary)] text-[var(--primary-foreground)]">
+              A. Instructions Walk
+            </button>
+            <button onclick="setSimScenario('mcp')" id="sim-scen-mcp" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-left sm:text-center bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">
+              B. MCP Collision
+            </button>
+            <button onclick="setSimScenario('skills')" id="sim-scen-skills" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-left sm:text-center bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">
+              C. Skill Ladder
+            </button>
+            <button onclick="setSimScenario('configs')" id="sim-scen-configs" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-left sm:text-center bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">
+              D. Config &amp; Arrays
+            </button>
+          </div>
+
+          <!-- CLI Engine Selector -->
+          <div class="grid grid-cols-3 sm:flex items-center gap-1.5 pt-1">
+            <span class="hidden sm:inline text-[11px] font-mono uppercase text-[var(--muted-foreground)] mr-1">Engine:</span>
+            <button onclick="setSimCli('claude')" id="sim-cli-claude" class="px-2.5 py-1.5 rounded-md text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] text-center">
+              Claude <span class="hidden sm:inline font-mono opacity-80">(claude)</span>
+            </button>
+            <button onclick="setSimCli('codex')" id="sim-cli-codex" class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)] text-center">
+              Codex <span class="hidden sm:inline font-mono opacity-80">(codex)</span>
+            </button>
+            <button onclick="setSimCli('agy')" id="sim-cli-agy" class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)] text-center">
+              Antigravity <span class="hidden sm:inline font-mono opacity-80">(agy)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Simulator Output -->
+        <div id="simulator-content" class="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 min-w-0"></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: INTERACTIVE FILE TREE ==================== -->
+    <section id="tab-tree" class="hidden w-full min-w-0 space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+        <!-- Left column: File list -->
+        <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-4 space-y-2.5 min-w-0">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--card-border)] pb-2.5">
+            <span class="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Filesystem Explorer</span>
+            <div class="flex gap-1">
+              <button onclick="setTreeCli('all')" id="tree-cli-all" class="px-2 py-1 rounded text-[11px] font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">All</button>
+              <button onclick="setTreeCli('claude')" id="tree-cli-claude" class="px-2 py-1 rounded text-[11px] font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Claude</button>
+              <button onclick="setTreeCli('codex')" id="tree-cli-codex" class="px-2 py-1 rounded text-[11px] font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Codex</button>
+              <button onclick="setTreeCli('agy')" id="tree-cli-agy" class="px-2 py-1 rounded text-[11px] font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">AGY</button>
+            </div>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)]">Tap any path to inspect its scope, merge rule, and example config.</p>
+          <div id="file-tree-list" class="space-y-1.5 max-h-[250px] lg:max-h-[560px] overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Right column: File inspector -->
+        <div id="file-inspector" class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 sm:p-5 min-w-0"></div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: GOTCHAS & LIMITS ==================== -->
+    <section id="tab-gotchas" class="hidden w-full min-w-0 space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <!-- Claude Code Gotchas -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
+            <h3 class="text-sm font-bold text-[var(--foreground)]">Claude Code (CLI + Desktop)</h3>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">claude</span>
+          </div>
+          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">1. Subdir CLAUDE.md is Lazy-Loaded</strong>
+              Root &amp; ancestor <code class="text-[var(--code-foreground)]">CLAUDE.md</code> load eagerly in CLI &amp; Desktop Code tab. Child <code class="text-[var(--code-foreground)]">pkg/CLAUDE.md</code> uses <strong>0 tokens</strong> until Claude reads/edits inside <code class="text-[var(--code-foreground)]">pkg/</code>.
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">2. Desktop Chat MCP ≠ Claude Code MCP</strong>
+              CLI &amp; Desktop <strong>Code tab</strong> use <code class="text-[var(--code-foreground)]">~/.claude.json</code> + <code class="text-[var(--code-foreground)]">.mcp.json</code> (name clash = full block replace). Claude Desktop <strong>Chat/Cowork</strong> uses <code class="text-[var(--code-foreground)]">claude_desktop_config.json</code> instead!
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">3. settings.json Arrays Replace, Not Append</strong>
+              Defining <code class="text-[var(--code-foreground)]">permissions.allow</code> in project <code class="text-[var(--code-foreground)]">.claude/settings.json</code> <strong>wipes out</strong> your global allow array instead of appending.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Codex Gotchas -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
+            <h3 class="text-sm font-bold text-[var(--foreground)]">Codex (CLI + Desktop App)</h3>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">codex</span>
+          </div>
+          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">1. AGENTS.override.md Wins Same Level</strong>
+              Both CLI &amp; Desktop App pick <strong>at most one</strong> doc per directory walking Global &rarr; Root &rarr; CWD. <code class="text-[var(--code-foreground)]">AGENTS.override.md</code> replaces <code class="text-[var(--code-foreground)]">AGENTS.md</code> in that folder.
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">2. Silent 32 KiB Instruction Cap</strong>
+              Combined <code class="text-[var(--code-foreground)]">AGENTS.md</code> chain stops silently at <code class="text-[var(--code-foreground)]">project_doc_max_bytes</code> (32 KiB default) unless raised in shared <code class="text-[var(--code-foreground)]">config.toml</code>.
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">3. Shared Harness &amp; Repo Trust Gate</strong>
+              Changes to <code class="text-[var(--code-foreground)]">~/.codex/config.toml</code>, <code class="text-[var(--code-foreground)]">[mcp_servers.*]</code>, and <code class="text-[var(--code-foreground)]">.agents/skills/</code> apply identically to CLI &amp; Desktop App. Project MCP requires marking the repo trusted.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Antigravity Gotchas -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between border-b border-[var(--card-border)] pb-2.5">
+            <h3 class="text-sm font-bold text-[var(--foreground)]">Antigravity (CLI + Desktop App)</h3>
+            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">agy</span>
+          </div>
+          <ul class="space-y-2.5 text-xs text-[var(--muted-foreground)] leading-relaxed">
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">1. Walks UP Only + 24 KB / 20k Token Budget</strong>
+              Both App &amp; CLI walk UP to repo root (never down) and skip <code class="text-[var(--code-foreground)]">rules/*.md</code> missing YAML <code class="text-[var(--code-foreground)]">trigger:</code>. App supports <code class="text-[var(--code-foreground)]">manual</code> <code class="text-[var(--code-foreground)]">@</code>-mentions; CLI does not.
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">2. CLI-Exclusive Skills Are Invisible to App!</strong>
+              <code class="text-[var(--code-foreground)]">~/.gemini/antigravity-cli/skills/</code> and <code class="text-[var(--code-foreground)]">~/.gemini/skills/</code> take #1 priority in CLI, but the <strong>Desktop App doesn't read them</strong>—use <code class="text-[var(--code-foreground)]">~/.gemini/config/skills/</code> for both.
+            </li>
+            <li class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <strong class="text-[var(--foreground)] block mb-1">3. Separate Settings Storage (App UI vs CLI JSON)</strong>
+              CLI stores prefs in <code class="text-[var(--code-foreground)]">~/.gemini/antigravity-cli/settings.json</code>; App stores Global + Per-Project settings (Permission Presets, Layouts, Worktrees) in the App UI (<code class="text-[var(--code-foreground)]">Cmd+,</code>).
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // ==================== DATA DEFINITIONS ====================
+    const MATRIX_DATA = [
+      {
+        id: 'instructions',
+        title: '1. Standing Instructions (CLAUDE.md / AGENTS.md / GEMINI.md / Rules)',
+        subtitle: 'Persistent markdown memory, coding conventions, and directory-scoped rules.',
+        rows: [
+          {
+            scope: 'global',
+            label: 'Global / User',
+            claude: {
+              paths: ['~/.claude/CLAUDE.md', '/etc/claude-code/CLAUDE.md (Managed)'],
+              detail: 'Shared by CLI & Desktop Code tab as your personal coding baseline across all repos.',
+              appDelta: 'Desktop Chat/Cowork tabs do not auto-load CLAUDE.md—only the Code tab (and CLI) does.'
+            },
+            codex: {
+              paths: ['~/.codex/AGENTS.override.md (if present)', '~/.codex/AGENTS.md (fallback)'],
+              detail: 'Identical in CLI & Desktop App. If AGENTS.override.md exists in ~/.codex/, it replaces ~/.codex/AGENTS.md.'
+            },
+            agy: {
+              paths: ['~/.gemini/{AGENTS,GEMINI}.md', '~/.gemini/config/{AGENTS,GEMINI}.md', '~/.gemini/config/rules/*.md (YAML trigger required)'],
+              detail: 'Shared by App & CLI. Standalone AGENTS/GEMINI.md are always_on; rules/*.md MUST include YAML trigger.'
+            }
+          },
+          {
+            scope: 'project',
+            label: 'Project / Root',
+            claude: {
+              paths: ['<repo>/CLAUDE.md or .claude/CLAUDE.md', '<repo>/CLAUDE.local.md (Gitignored)', '<repo>/.claude/rules/*.md'],
+              detail: 'Identical in CLI & Desktop Code tab. Loaded eagerly at session start; supports @path imports.'
+            },
+            codex: {
+              paths: ['<repo>/AGENTS.override.md', '<repo>/AGENTS.md', 'project_doc_fallback_filenames (config.toml)'],
+              detail: 'Identical in CLI & Desktop App. Loaded at startup after global instructions.'
+            },
+            agy: {
+              paths: ['<repo>/{AGENTS,GEMINI}.md', '<repo>/.agents/{AGENTS,GEMINI}.md', '<repo>/.agents/rules/*.md & rules.json'],
+              detail: 'Shared by App & CLI. Supports @[label](path) inlining and @filename canonical path resolution.',
+              appDelta: 'App supports trigger: manual via @-mentions in chat; Antigravity CLI does not support manual rule mentions.'
+            }
+          },
+          {
+            scope: 'directory',
+            label: 'Subdirectory / CWD',
+            claude: {
+              paths: ['Ancestors up to CWD: Eager at startup', 'Child subdirs (<subdir>/CLAUDE.md): Lazy ON DEMAND'],
+              detail: 'Identical in CLI & Desktop Code tab. Subdir CLAUDE.md below CWD uses 0 tokens until accessed.'
+            },
+            codex: {
+              paths: ['Every dir from <repo-root> down to <cwd>: AGENTS.override.md or AGENTS.md'],
+              detail: 'Identical in CLI & Desktop App. Walks DOWN from repo root to CWD (max 1 file/dir); ignores below CWD.'
+            },
+            agy: {
+              paths: ['Every dir walking UP from workspace folder to <repo-root>: AGENTS.md, GEMINI.md, .agents/rules/*.md'],
+              detail: 'Both walk UP to repo root and never load rules from subfolders below the workspace folder.',
+              appDelta: 'App checks every folder added to a Project (multi-folder projects); CLI checks launch CWD + --add-dir / /add-dir.'
+            }
+          },
+          {
+            scope: 'resolution',
+            label: 'Append / Overwrite',
+            claude: {
+              badge: 'Cumulative Append (Eager Ancestors + Lazy Subdirs)',
+              paths: ['Global -> Root/Ancestors -> CLAUDE.local.md -> Lazy Subdir'],
+              detail: 'Identical in CLI & Desktop Code tab. More specific files appear later; oversized lazy files truncate with a Read hint.'
+            },
+            codex: {
+              badge: 'Top-Down Concat + Same-Level Override + 32 KiB Cap',
+              paths: ['~/.codex/ -> <repo>/ -> ... -> <cwd>/ (AGENTS.override.md beats AGENTS.md)'],
+              detail: 'Identical in CLI & Desktop App. Stops silently at project_doc_max_bytes (default 32 KiB).'
+            },
+            agy: {
+              badge: 'Cumulative Union + 24 KB/file + 20k Token Demotion',
+              paths: ['Global + Repo-to-Workspace AGENTS/GEMINI.md + .agents/rules/*.md (Deduplicated)'],
+              detail: 'Identical in App & CLI. Never overwrites; excess >20k tokens demotes largest rules to pointers.'
+            }
+          }
+        ]
+      },
+      {
+        id: 'mcp',
+        title: '2. MCP Server Configs (Local Stdio & Remote HTTP Tool Servers)',
+        subtitle: 'Where Model Context Protocol servers live, trust gates, and how duplicate server names resolve.',
+        rows: [
+          {
+            scope: 'global',
+            label: 'Global / User',
+            claude: {
+              paths: ['~/.claude.json (CLI & Desktop Code tab)', '/etc/claude-code/managed-mcp.json (Enterprise)'],
+              detail: 'User-scoped Claude Code servers live under top-level "mcpServers" in ~/.claude.json.',
+              appDelta: 'Claude Desktop (Chat/Cowork) reads a separate file: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows).'
+            },
+            codex: {
+              paths: ['~/.codex/config.toml ([mcp_servers.<name>])'],
+              detail: 'Identical in CLI & Desktop App—adding a server via CLI immediately appears in the Codex Desktop App.'
+            },
+            agy: {
+              paths: ['~/.gemini/config/mcp_config.json ("mcpServers")', '~/.gemini/config/plugins/<name>/mcp_config.json'],
+              detail: 'Shared by Antigravity App, IDE, and CLI. Supports stdio (command) & Streamable HTTP (serverUrl/url).',
+              appDelta: 'App renders MCP Apps (ui:// interactive HTML panes) & GUI Customizations > MCP Servers; CLI runs tools as plain text & manages via /mcp.'
+            }
+          },
+          {
+            scope: 'project',
+            label: 'Project / Root',
+            claude: {
+              paths: ['<repo>/.mcp.json (Team / Committed)', '~/.claude.json under project path (Local / Private)'],
+              detail: 'Identical in CLI & Desktop Code tab. Shared .mcp.json supports ${VAR} expansion; Local stays private.'
+            },
+            codex: {
+              paths: ['<repo>/.codex/config.toml ([mcp_servers.<name>])'],
+              detail: 'Identical in CLI & Desktop App. Loads ONLY in trusted repos (approved via CLI or Desktop Agent Security UI).'
+            },
+            agy: {
+              paths: ['<repo>/.agents/mcp_config.json', '<repo>/.agents/plugins/<name>/mcp_config.json'],
+              detail: 'Identical in App & CLI. Supports enabledTools, disabledTools, tools.<name>.eager, and timeoutSeconds.'
+            }
+          },
+          {
+            scope: 'directory',
+            label: 'Subdirectory / CWD',
+            claude: {
+              paths: ['None (Strictly User, Local-per-project, and Project Root .mcp.json)'],
+              detail: 'Identical in CLI & Desktop Code tab—no arbitrary subdirectory .mcp.json walking.'
+            },
+            codex: {
+              paths: ['Closest / nested <dir>/.codex/config.toml (Trusted projects only)'],
+              detail: 'Identical in CLI & Desktop App. Nested .codex/config.toml closer to CWD beats repo root.'
+            },
+            agy: {
+              paths: ['<workspace-up-to-repo-root>/.agents/mcp_config.json'],
+              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; never scans below workspace.'
+            }
+          },
+          {
+            scope: 'resolution',
+            label: 'Overwrite / Merge',
+            claude: {
+              badge: 'Union by Name | Collision = Full Block Replace (No Deep-Merge)',
+              paths: ['1. Managed (/etc)', '2. Local (~/.claude.json project)', '3. Project (.mcp.json)', '4. User (~/.claude.json global)', '5. Plugins'],
+              detail: 'Identical in CLI & Desktop Code tab. Duplicate server key replaces the entire block (no env/args merging).'
+            },
+            codex: {
+              badge: 'Union by Name | Collision = Full Table Replace',
+              paths: ['1. CLI Flags (-c)', '2. Nested .codex/config.toml', '3. Repo Root .codex/config.toml', '4. User ~/.codex/config.toml'],
+              detail: 'Identical in CLI & Desktop App (minus CLI-only -c flags in GUI). Matching server name replaces entire table.'
+            },
+            agy: {
+              badge: 'Union by Name | Workspace Overrides Global | Plugins Namespaced',
+              paths: ['1. Workspace (.agents/mcp_config.json)', '2. Global (~/.gemini/config/mcp_config.json)', '3. Enabled Plugins (namespaced)'],
+              detail: 'Identical in App & CLI. Remote servers must use Streamable HTTP (legacy SSE requires mcp-remote bridge).'
+            }
+          }
+        ]
+      },
+      {
+        id: 'skills',
+        title: '3. Skills & Custom Commands (Progressive Disclosure Workflows)',
+        subtitle: 'Reusable task workflows and slash commands loaded on-demand when relevant.',
+        rows: [
+          {
+            scope: 'global',
+            label: 'Global / User',
+            claude: {
+              paths: ['~/.claude/skills/<name>/SKILL.md', '~/.claude/commands/<name>.md (Legacy)'],
+              detail: 'Identical in CLI & Desktop Code tab. Also syncs Claude.ai skills when syncClaudeAiSkills is enabled.'
+            },
+            codex: {
+              paths: ['~/.agents/skills/<name>/SKILL.md', '~/.codex/skills/<name>/SKILL.md', '~/.codex/prompts/<name>.md', '/etc/codex/skills/ (Admin)'],
+              detail: 'Identical in CLI & Desktop App. Both read ~/.agents/skills/ and ~/.codex/skills/.'
+            },
+            agy: {
+              paths: ['~/.gemini/config/skills/<name>/SKILL.md (App + CLI Personal)', '~/.gemini/antigravity-cli/skills/ (CLI ONLY)', '~/.gemini/skills/ (CLI ONLY)'],
+              detail: 'Put personal skills in ~/.gemini/config/skills/ to share them between Antigravity App and CLI.',
+              appDelta: 'Desktop App does NOT read ~/.gemini/antigravity-cli/skills/ or ~/.gemini/skills/ (CLI-exclusive). App auto-refreshes lists; CLI uses /skills reload.'
+            }
+          },
+          {
+            scope: 'project',
+            label: 'Project / Root',
+            claude: {
+              paths: ['<repo>/.claude/skills/<name>/SKILL.md', '<repo>/.claude/commands/<name>.md'],
+              detail: 'Identical in CLI & Desktop Code tab. Checked into git for shared team workflows.'
+            },
+            codex: {
+              paths: ['<repo>/.agents/skills/<name>/SKILL.md'],
+              detail: 'Identical in CLI & Desktop App. Shared via version control.'
+            },
+            agy: {
+              paths: ['<repo>/.agents/skills/<name>/SKILL.md', 'people/<user>/.agents/skills/ (via .gemini/config.json)', 'Paths in <repo>/.agents/skills.json'],
+              detail: 'Identical in App & CLI. Scanned 1 level deep unless deeper paths are listed in skills.json.'
+            }
+          },
+          {
+            scope: 'directory',
+            label: 'Subdirectory / CWD',
+            claude: {
+              paths: ['<subdir>/.claude/skills/<name>/SKILL.md (Monorepo discovery)'],
+              detail: 'Identical in CLI & Desktop Code tab.'
+            },
+            codex: {
+              paths: ['<cwd-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
+              detail: 'Identical in CLI & Desktop App. Scans upward from working folder to repo root.'
+            },
+            agy: {
+              paths: ['<workspace-up-to-repo-root>/.agents/skills/<name>/SKILL.md'],
+              detail: 'Identical in App & CLI. Walks UP from workspace folder/CWD to repo root; never scans below workspace.'
+            }
+          },
+          {
+            scope: 'resolution',
+            label: 'Overwrite / Shadow',
+            claude: {
+              badge: 'Union Pool | Project Shadows Global',
+              paths: ['1. Project (.claude/skills/)', '2. Global (~/.claude/skills/)', '3. Plugin Skills (namespaced)'],
+              detail: 'Identical in CLI & Desktop Code tab. Project overrides Global on identical skill name.'
+            },
+            codex: {
+              badge: 'Union Pool | Repo > User > Admin > System',
+              paths: ['1. Repo/CWD (.agents/skills/)', '2. User (~/.agents & ~/.codex)', '3. Admin (/etc/codex/skills/)', '4. System'],
+              detail: 'Identical in CLI & Desktop App. Repo-local wins name collisions.'
+            },
+            agy: {
+              badge: 'Personal-in-Repo > Workspace > Global Config > Built-in',
+              paths: ['(CLI #1) ~/.gemini/antigravity-cli/skills & ~/.gemini/skills', '1. Personal Repo (people/{user}/.agents/skills)', '2. Workspace (.agents/skills & skills.json)', '3. Personal Global (~/.gemini/config/skills)', '4. Built-in (Plugins: <plugin>:<skill>)'],
+              detail: 'Plugin skills are namespaced as <plugin>:<skill> and never collide.',
+              appDelta: 'In CLI only, ~/.gemini/antigravity-cli/skills/ & ~/.gemini/skills/ sit above #1 (beating workspace skills & ignoring manifest exclude lists).'
+            }
+          }
+        ]
+      },
+      {
+        id: 'configs',
+        title: '4. Configs & Settings (Models, Permissions, Hooks, Manifests)',
+        subtitle: 'General runtime settings, tool permission rules, and discovery manifests.',
+        rows: [
+          {
+            scope: 'global',
+            label: 'Global / User',
+            claude: {
+              paths: ['~/.claude/settings.json', '/etc/claude-code/managed-settings.json (Enterprise)'],
+              detail: 'Shared by CLI & Desktop Code tab for default model, permissions, hooks, and env vars.',
+              appDelta: 'Claude Desktop GUI preferences (window, theme, Chat/Cowork toggles) live in Desktop App UI settings.'
+            },
+            codex: {
+              paths: ['~/.codex/config.toml ($CODEX_HOME/config.toml)', '~/.codex/<profile>.config.toml'],
+              detail: 'Shared by CLI & Desktop App for model, approval_policy, sandbox_mode, and project_doc_max_bytes.',
+              appDelta: 'Desktop App adds visual multi-thread orchestration, worktree switching & Agent Security UI on top of shared config.toml.'
+            },
+            agy: {
+              paths: ['CLI: ~/.gemini/antigravity-cli/settings.json (Sparse JSON)', 'App: Settings UI (Cmd+,) Global Preferences', 'Shared: ~/.gemini/config/hooks.json & *.json manifests'],
+              detail: 'Hooks & discovery manifests ({skills,rules,agents,plugins}.json) are shared across both surfaces.',
+              appDelta: 'App does NOT read ~/.gemini/antigravity-cli/settings.json—it manages Global Permission Presets (Request Review/Default/Auto/Turbo), Interface Layout (SWE vs Knowledge Work), Browser & Orchestrator/Executor models in UI.'
+            }
+          },
+          {
+            scope: 'project',
+            label: 'Project / Root',
+            claude: {
+              paths: ['<repo>/.claude/settings.json (Team / VCS)', '<repo>/.claude/settings.local.json (Personal / Gitignored)'],
+              detail: 'Identical in CLI & Desktop Code tab. Splits shared team policies from gitignored local overrides.'
+            },
+            codex: {
+              paths: ['<repo>/.codex/config.toml (Trusted repos only)'],
+              detail: 'Identical in CLI & Desktop App once the repo is marked trusted.'
+            },
+            agy: {
+              paths: ['Shared: <repo>/.agents/hooks.json & *.json manifests', 'Shared: <repo>/.gemini/config.json (personal_customization_dir)', 'App: Per-Project Settings UI (Folders, Worktrees, Preset override)'],
+              detail: 'Repo hooks, manifests, and personal_customization_dir work identically in App & CLI.',
+              appDelta: 'App supports isolated Per-Project settings in UI (Inherit Global vs project Permission Preset override, Local vs Git Worktree mode); CLI stores trustedWorkspaces in its global settings.json.'
+            }
+          },
+          {
+            scope: 'directory',
+            label: 'Subdirectory / CWD',
+            claude: {
+              paths: ['None (Strictly Global + Project Root)'],
+              detail: 'Identical in CLI & Desktop Code tab—no subdirectory settings.json inheritance.'
+            },
+            codex: {
+              paths: ['Nested <dir>/.codex/config.toml (Trusted repos only)'],
+              detail: 'Identical in CLI & Desktop App for trusted nested directories.'
+            },
+            agy: {
+              paths: ['<workspace-up-to-repo-root>/.agents/{skills,rules,agents,plugins}.json'],
+              detail: 'Identical in App & CLI. Manifests are honored in every .agents/ folder walking UP to repo root.'
+            }
+          },
+          {
+            scope: 'resolution',
+            label: 'Overwrite / Merge',
+            claude: {
+              badge: 'Scalars Overwrite | Objects Deep-Merge | Arrays Replace',
+              paths: ['1. Managed (/etc)', '2. CLI Flags (CLI only)', '3. .claude/settings.local.json', '4. .claude/settings.json', '5. ~/.claude/settings.json'],
+              detail: 'Identical merge engine in CLI & Desktop Code tab. Arrays (like permissions.allow) replace rather than append.'
+            },
+            codex: {
+              badge: 'Key-Level Overwrite (Most Specific Wins)',
+              paths: ['1. CLI Flags -c (CLI only)', '2. Project .codex/config.toml', '3. Profile ~/.codex/<name>.config.toml', '4. Global ~/.codex/config.toml'],
+              detail: 'Identical config.toml precedence in CLI & Desktop App (GUI threads skip CLI-only -c flags).'
+            },
+            agy: {
+              badge: 'CLI: Flags > settings.json | App: Project UI > Global UI',
+              paths: ['CLI: Flags (--mode/--model/--sandbox) > ~/.gemini/antigravity-cli/settings.json', 'App: Project Settings Override > Global Settings (or Inherit Global)', 'Shared: Manifest inherits[] + entries[] (additive) + exclude'],
+              detail: 'Manifests are additive across both surfaces; runtime setting storage & overrides differ between App UI and CLI JSON.',
+              appDelta: 'CLI uses flags + ~/.gemini/antigravity-cli/settings.json; App uses hierarchical Global UI -> Project UI overrides.'
+            }
+          }
+        ]
+      }
+    ];
+
+    const TREE_NODES = [
+      {
+        id: 'claude-global-md',
+        cli: 'claude',
+        path: '~/.claude/CLAUDE.md',
+        scope: 'Global User',
+        type: 'Instructions (MD)',
+        behavior: 'Appended 1st (Eager at startup)',
+        git: 'Local Only',
+        summary: 'Personal baseline instructions injected into every repository.',
+        code: `# Personal Preferences\n- Prefer functional TypeScript patterns.\n- Always run tests before claiming a fix.`
+      },
+      {
+        id: 'claude-subdir-md',
+        cli: 'claude',
+        path: '<repo>/CLAUDE.md & <subdir>/CLAUDE.md',
+        scope: 'Root (Eager) + Subdir (Lazy)',
+        type: 'Instructions (MD)',
+        behavior: 'Root eager; subdir lazy-loaded ONLY when files inside it are accessed',
+        git: 'CLAUDE.md Git | CLAUDE.local.md Ignored',
+        summary: 'Monorepo-friendly: child CLAUDE.md files cost 0 tokens at startup until Claude reads/edits inside that folder.',
+        code: `# Payments Package (packages/payments/CLAUDE.md)\n- Never log raw PAN or CVV fields.\n- Represent money as integer cents (BigInt).`
+      },
+      {
+        id: 'claude-mcp',
+        cli: 'claude',
+        path: '<repo>/.mcp.json & ~/.claude.json',
+        scope: 'CLI & Desktop Code Tab',
+        type: 'MCP Config (JSON)',
+        behavior: 'Local > Project > User; matching server name = full entry replace',
+        git: '.mcp.json Git | ~/.claude.json Local',
+        summary: 'Used by Claude Code CLI and Claude Desktop Code tab. User-global and private per-project ("Local") MCP servers live in ~/.claude.json; team-shared MCP servers live in <repo>/.mcp.json.',
+        code: `// <repo>/.mcp.json\n{\n  "mcpServers": {\n    "postgres": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-postgres"],\n      "env": { "DATABASE_URL": "\${DATABASE_URL}" }\n    }\n  }\n}`
+      },
+      {
+        id: 'claude-desktop-mcp',
+        cli: 'claude',
+        path: '~/Library/Application Support/Claude/claude_desktop_config.json',
+        scope: 'Claude Desktop App (Chat / Cowork)',
+        type: 'Desktop MCP Config (JSON)',
+        behavior: 'Separate from ~/.claude.json & .mcp.json (App ≠ CLI)',
+        git: 'Local Machine Only',
+        summary: 'Exclusively configures local MCP servers for Claude Desktop Chat/Cowork tabs (on Windows: %APPDATA%\\Claude\\claude_desktop_config.json). Not read by Claude Code CLI.',
+        code: `{\n  "mcpServers": {\n    "filesystem": {\n      "command": "npx",\n      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/me/docs"]\n    }\n  }\n}`
+      },
+      {
+        id: 'claude-skills',
+        cli: 'claude',
+        path: '<repo>/.claude/skills/<name>/SKILL.md',
+        scope: 'Project & Global (~/.claude/skills/)',
+        type: 'Skill (MD)',
+        behavior: 'Project shadows Global on name collision',
+        git: 'Project Git | Global Local',
+        summary: 'On-demand workflows using progressive disclosure (only name & description in initial prompt).',
+        code: `---\nname: release-check\ndescription: Run pre-release verification checks and changelog audit.\n---\n1. Run \`pnpm test:ci\`\n2. Verify CHANGELOG.md has an entry.`
+      },
+      {
+        id: 'claude-settings',
+        cli: 'claude',
+        path: '~/.claude/settings.json & .claude/settings[.local].json',
+        scope: 'Global, Project & Local',
+        type: 'Config (JSON)',
+        behavior: 'Scalars Overwrite | Objects Deep-Merge | Arrays Replace',
+        git: 'settings.json Git | .local.json Ignored',
+        summary: 'Controls model, permissions, hooks, and env vars. Remember: array keys like permissions.allow replace rather than append.',
+        code: `{\n  "model": "claude-sonnet-4-6",\n  "permissions": {\n    "allow": ["Read", "Edit", "Bash(pnpm test *)"]\n  }\n}`
+      },
+      {
+        id: 'codex-agents-md',
+        cli: 'codex',
+        path: '~/.codex/AGENTS.md -> <repo>/AGENTS.md -> <cwd>/AGENTS.override.md',
+        scope: 'Global -> Root -> CWD Walk',
+        type: 'Instructions (MD)',
+        behavior: 'Top-down concat (max 1/dir; .override.md wins same dir; 32 KiB cap)',
+        git: 'Repo files Git | ~/.codex Local',
+        summary: 'Walks down from repo root to CWD at startup, concatenating at most 1 file per level up to project_doc_max_bytes.',
+        code: `# AGENTS.override.md (replaces AGENTS.md in this directory)\n- Use uv for all Python commands in this service.\n- Never modify generated protobuf files.`
+      },
+      {
+        id: 'codex-mcp-config',
+        cli: 'codex',
+        path: '~/.codex/config.toml & <repo>/.codex/config.toml',
+        scope: 'Global, Profile & Trusted Project',
+        type: 'MCP + Config (TOML)',
+        behavior: 'CLI > Nested/Root .codex/config.toml > Profile > Global; same server table replaces whole block',
+        git: 'Project Git (Trusted) | Global Local',
+        summary: 'Single TOML file holds both runtime settings (model, sandbox_mode, project_doc_max_bytes) and [mcp_servers.<name>] tables.',
+        code: `model = "gpt-5-codex"\napproval_policy = "on-request"\nproject_doc_max_bytes = 65536\n\n[mcp_servers.linear]\nurl = "https://mcp.linear.app/mcp"\nbearer_token_env_var = "LINEAR_API_KEY"`
+      },
+      {
+        id: 'codex-skills',
+        cli: 'codex',
+        path: '<cwd-to-repo>/.agents/skills/<name>/SKILL.md',
+        scope: 'Repo, User (~/.agents & ~/.codex), Admin',
+        type: 'Skill (MD)',
+        behavior: 'Repo > User > Admin > System on name collision',
+        git: '.agents/skills Git',
+        summary: 'Scans upward from CWD to repo root for .agents/skills/*/SKILL.md and merges with user/admin skills.',
+        code: `---\nname: db-migration\ndescription: Generate and verify SQL migrations safely.\n---\nRun \`./scripts/migrate-dry-run.sh\` before applying changes.`
+      },
+      {
+        id: 'agy-rules',
+        cli: 'agy',
+        path: '~/.gemini/AGENTS.md + <cwd-to-repo>/{AGENTS,GEMINI}.md & .agents/rules/*.md',
+        scope: 'Global & CWD-up-to-Root',
+        type: 'Instructions & Rules (MD)',
+        behavior: 'Cumulative deduplicated union (24 KB/file, 20k token budget)',
+        git: 'Workspace Git | ~/.gemini Local',
+        summary: 'AGENTS/GEMINI.md are always_on without frontmatter. rules/*.md REQUIRE YAML frontmatter with trigger.',
+        code: `---\ntrigger: model_decision\ndescription: "Apply when editing GraphQL schemas or resolvers."\n---\nFollow shared standards:\n@[API Standards](../docs/api-standards.md)`
+      },
+      {
+        id: 'agy-mcp',
+        cli: 'agy',
+        path: '<cwd-to-repo>/.agents/mcp_config.json & ~/.gemini/config/mcp_config.json',
+        scope: 'Workspace, Global & Plugins',
+        type: 'MCP Config (JSON)',
+        behavior: 'Workspace > Global > Plugins (namespaced); Streamable HTTP or Stdio only',
+        git: '.agents/mcp_config.json Git',
+        summary: 'Defines local stdio (command) or remote Streamable HTTP (serverUrl/url) servers. Supports tool allow/denylists, eager loading, and /mcp TUI.',
+        code: `{\n  "mcpServers": {\n    "my-remote": {\n      "serverUrl": "https://api.example.com/mcp/",\n      "headers": { "Authorization": "Bearer TOKEN" },\n      "timeoutSeconds": 600,\n      "disabledTools": ["dangerous_drop"]\n    }\n  }\n}`
+      },
+      {
+        id: 'agy-skills',
+        cli: 'agy',
+        path: '~/.gemini/antigravity-cli/skills/ > people/{user}/.agents/skills/ > .agents/skills/',
+        scope: 'CLI-Exclusive, Personal-in-Repo, Workspace, Global',
+        type: 'Skill (MD)',
+        behavior: 'CLI-exclusive folders beat everything; 1-level scan (use skills.json for deeper)',
+        git: '.agents/skills Git',
+        summary: 'Run /skills reload in agy to refresh after editing. Use ~/.gemini/config/skills/ to share personal skills with Antigravity App.',
+        code: `---\nname: api-load-test\ndescription: Run k6 load tests against local API endpoints.\n---\n1. Start server\n2. Run [run-k6.sh](./scripts/run-k6.sh)`
+      },
+      {
+        id: 'agy-settings',
+        cli: 'agy',
+        path: '~/.gemini/antigravity-cli/settings.json & .agents/*.json manifests',
+        scope: 'Global CLI Profile & Additive Manifests',
+        type: 'Config & Manifests (JSON)',
+        behavior: 'CLI flags > settings.json; manifests add entries + global exclude filter',
+        git: 'settings.json Local | .agents/*.json Git',
+        summary: 'Sparse JSON for CLI preferences; discovery manifests (skills.json, rules.json) inherit external or deeply nested folders.',
+        code: `// ~/.gemini/antigravity-cli/settings.json\n{\n  "agentMode": "auto",\n  "verbosity": "medium",\n  "enableTerminalSandbox": true\n}`
+      }
+    ];
+
+    // ==================== HELPERS & STATE ====================
+    function esc(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    let activeMainTab = 'matrix';
+    let activePillar = 'all';
+    let activeMatrixCli = 'all';
+    let deltaOnly = false;
+    let activeSimScenario = 'instructions';
+    let activeSimCli = 'claude';
+    let activeTreeCli = 'all';
+    let selectedTreeNodeId = TREE_NODES[0].id;
+
+    // ==================== STANDALONE THEME CONTROLS ====================
+    function applyStandaloneTheme(name) {
+      const tokens = window.__STANDALONE_THEMES[name] || window.__STANDALONE_THEMES.wireframe;
+      const root = document.documentElement;
+      Object.entries(tokens).forEach(([k, v]) => root.style.setProperty(k, v));
+      window.__ACTIVE_THEME = name;
+      try { localStorage.setItem('cli-guide-theme', name); } catch (_) {}
+      ['wireframe', 'light', 'dark'].forEach(t => {
+        const btn = document.getElementById('theme-btn-' + t);
+        if (!btn) return;
+        btn.className = t === name
+          ? 'px-1.5 sm:px-2 py-0.5 rounded transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
+          : 'px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+      });
+    }
+
+    function initThemeSwitcherUI() {
+      if (window.__IS_STANDALONE) {
+        const sw = document.getElementById('standalone-theme-switcher');
+        if (sw) {
+          sw.classList.remove('hidden');
+          sw.classList.add('inline-flex');
+        }
+        applyStandaloneTheme(window.__ACTIVE_THEME || 'wireframe');
+      }
+    }
+
+    // ==================== NAVIGATION ====================
+    function switchMainTab(tabId) {
+      activeMainTab = tabId;
+      ['matrix', 'simulator', 'tree', 'gotchas'].forEach(id => {
+        const el = document.getElementById('tab-' + id);
+        const btn = document.getElementById('tab-btn-' + id);
+        if (id === tabId) {
+          el.classList.remove('hidden');
+          btn.className = 'px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] text-center truncate';
+        } else {
+          el.classList.add('hidden');
+          btn.className = 'px-1.5 sm:px-3 py-1.5 rounded-md text-[11px] sm:text-xs font-semibold transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-center truncate';
+        }
+      });
+    }
+
+    function jumpToPillar(pillarId) {
+      switchMainTab('matrix');
+      setMatrixPillar(pillarId);
+      const target = document.getElementById('tab-matrix');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ==================== TAB 1: MATRIX ====================
+    function setMatrixPillar(pillar) {
+      activePillar = pillar;
+      ['all', 'instructions', 'mcp', 'skills', 'configs'].forEach(p => {
+        const btn = document.getElementById('pillar-' + p);
+        btn.className = p === pillar
+          ? 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
+      });
+      renderMatrix();
+    }
+
+    function setMatrixCli(cli) {
+      activeMatrixCli = cli;
+      ['all', 'claude', 'codex', 'agy'].forEach(c => {
+        const btn = document.getElementById('mcli-' + c);
+        btn.className = c === cli
+          ? 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
+      });
+      renderMatrix();
+    }
+
+    function toggleDeltaOnly() {
+      deltaOnly = !deltaOnly;
+      const btn = document.getElementById('delta-only-btn');
+      if (btn) {
+        btn.className = deltaOnly
+          ? 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-mono font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-mono font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
+      }
+      renderMatrix();
+    }
+
+    function renderCell(data) {
+      const badgeHtml = data.badge
+        ? `<div class="mb-1.5"><span class="inline-block text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] leading-snug path-chip">${esc(data.badge)}</span></div>`
+        : '';
+      const pathsHtml = data.paths.map(p =>
+        `<li class="text-[11px] sm:text-xs font-mono text-[var(--code-foreground)] bg-[var(--card)] px-2 py-1 rounded border border-[var(--card-border)] path-chip">${esc(p)}</li>`
+      ).join('');
+      const deltaHtml = data.appDelta
+        ? `<div class="mt-2 p-2 rounded-md border border-dashed border-[var(--border)] bg-[var(--card)] text-[11px] leading-snug text-[var(--foreground)]"><span class="font-mono font-bold uppercase text-[10px] mr-1">App ≠ CLI:</span>${esc(data.appDelta)}</div>`
+        : '';
+      return `
+        <div class="space-y-1.5 min-w-0">
+          ${badgeHtml}
+          <ul class="space-y-1">${pathsHtml}</ul>
+          <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${esc(data.detail)}</p>
+          ${deltaHtml}
+        </div>
+      `;
+    }
+
+    function renderMatrix() {
+      const scopeFilter = document.getElementById('scope-filter').value;
+      const container = document.getElementById('matrix-container');
+      const pillars = activePillar === 'all' ? MATRIX_DATA : MATRIX_DATA.filter(p => p.id === activePillar);
+
+      const cliDefs = [
+        { key: 'claude', name: 'Claude Code', sub: 'CLI + Desktop' },
+        { key: 'codex', name: 'Codex', sub: 'CLI + App' },
+        { key: 'agy', name: 'Antigravity', sub: 'CLI + App' }
+      ];
+      const visibleClis = activeMatrixCli === 'all' ? cliDefs : cliDefs.filter(c => c.key === activeMatrixCli);
+      const cliGridClass = visibleClis.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3';
+
+      const renderedPillars = pillars.map(pillar => {
+        let rows = scopeFilter === 'all' ? pillar.rows : pillar.rows.filter(r => r.scope === scopeFilter);
+        if (deltaOnly) {
+          rows = rows.filter(r => visibleClis.some(c => Boolean(r[c.key].appDelta)));
+        }
+        if (rows.length === 0) return '';
+
+        const rowsHtml = rows.map(row => `
+          <div class="p-3 sm:p-4 border-t border-[var(--card-border)] space-y-2.5 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-3 min-w-0">
+            <div class="lg:col-span-2 flex items-baseline justify-between lg:flex-col lg:justify-start gap-2 min-w-0">
+              <span class="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">${esc(row.label)}</span>
+              <span class="text-[11px] font-mono text-[var(--muted-foreground)]">${row.scope === 'resolution' ? 'Precedence' : 'Scope'}</span>
+            </div>
+            <div class="lg:col-span-10 grid ${cliGridClass} gap-2.5 sm:gap-3 min-w-0">
+              ${visibleClis.map(c => {
+                const cell = row[c.key];
+                const hasDelta = Boolean(cell.appDelta);
+                const syncBadge = hasDelta
+                  ? `<span class="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] shrink-0">App ≠ CLI</span>`
+                  : `<span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--muted-foreground)] border border-[var(--card-border)] shrink-0">CLI = App</span>`;
+                return `
+                  <div class="p-2.5 sm:p-3 rounded-lg bg-[var(--background)] border ${hasDelta ? 'border-[var(--border)]' : 'border-[var(--card-border)]'} min-w-0">
+                    <div class="text-xs font-bold text-[var(--foreground)] mb-2 pb-1.5 border-b border-[var(--card-border)] flex items-center justify-between gap-2">
+                      <span class="truncate">${esc(c.name)} <span class="font-normal text-[11px] text-[var(--muted-foreground)]">(${esc(c.sub)})</span></span>
+                      ${syncBadge}
+                    </div>
+                    ${renderCell(cell)}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `).join('');
+
+        return `
+          <article class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
+            <div class="px-3.5 py-3 sm:px-4 sm:py-3.5 bg-[var(--background)]">
+              <h2 class="text-sm sm:text-base font-bold text-[var(--foreground)] leading-snug">${esc(pillar.title)}</h2>
+              <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] mt-0.5">${esc(pillar.subtitle)}</p>
+            </div>
+            ${rowsHtml}
+          </article>
+        `;
+      }).filter(Boolean).join('');
+
+      container.innerHTML = renderedPillars || `
+        <div class="p-5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-center text-xs text-[var(--muted-foreground)]">
+          No <strong>App ≠ CLI</strong> differences for this filter — the CLI and Desktop App behave identically here!
+        </div>
+      `;
+    }
+
+    // ==================== TAB 2: SIMULATOR ====================
+    function setSimScenario(scen) {
+      activeSimScenario = scen;
+      ['instructions', 'mcp', 'skills', 'configs'].forEach(s => {
+        const btn = document.getElementById('sim-scen-' + s);
+        btn.className = s === scen
+          ? 'px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left sm:text-center bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2.5 py-1.5 rounded-lg text-xs font-medium text-left sm:text-center bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
+      });
+      renderSimulator();
+    }
+
+    function setSimCli(cli) {
+      activeSimCli = cli;
+      ['claude', 'codex', 'agy'].forEach(c => {
+        const btn = document.getElementById('sim-cli-' + c);
+        btn.className = c === cli
+          ? 'px-2.5 py-1.5 rounded-md text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] text-center'
+          : 'px-2.5 py-1.5 rounded-md text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)] text-center';
+      });
+      renderSimulator();
+    }
+
+    function renderSimulator() {
+      const container = document.getElementById('simulator-content');
+
+      if (activeSimScenario === 'instructions') {
+        const simData = {
+          claude: {
+            title: 'Claude Code CLI — Launch CWD: /repo/services/api',
+            ruleSummary: 'Appends Global + Root + Ancestors eagerly at startup. Subfolders below CWD are LAZY-LOADED only when files inside them are read/edited.',
+            files: [
+              { path: '~/.claude/CLAUDE.md', status: 'STARTUP (1st)', badge: 'Eager Append', desc: 'Global personal baseline loaded first.' },
+              { path: '/repo/CLAUDE.md', status: 'STARTUP (2nd)', badge: 'Eager Append', desc: 'Repo root instructions appended onto global.' },
+              { path: '/repo/services/api/CLAUDE.md', status: 'STARTUP (3rd)', badge: 'Eager Append', desc: 'CWD instructions refine broader rules.' },
+              { path: '/repo/services/api/CLAUDE.local.md', status: 'STARTUP (4th)', badge: 'Gitignored Local', desc: 'Personal overrides appended after CWD CLAUDE.md.' },
+              { path: '/repo/services/api/src/db/CLAUDE.md', status: 'LAZY / ON-DEMAND', badge: '0 Startup Tokens', desc: 'Injected dynamically ONLY when Claude reads/edits a file under src/db/.' }
+            ]
+          },
+          codex: {
+            title: 'Codex CLI — Launch CWD: /repo/services/api',
+            ruleSummary: 'Walks Top-Down (Global -> Root -> CWD), picking max ONE file per directory (AGENTS.override.md replaces AGENTS.md in that dir). Hard cap 32 KiB.',
+            files: [
+              { path: '~/.codex/AGENTS.md', status: 'STARTUP (1st)', badge: 'Concatenated', desc: 'Loaded because ~/.codex/AGENTS.override.md is absent.' },
+              { path: '/repo/AGENTS.md', status: 'STARTUP (2nd)', badge: 'Concatenated', desc: 'Appended after global instructions.' },
+              { path: '/repo/services/api/AGENTS.md', status: 'SKIPPED', badge: 'Replaced by .override', desc: 'Ignored because AGENTS.override.md exists in the same directory.' },
+              { path: '/repo/services/api/AGENTS.override.md', status: 'STARTUP (3rd)', badge: 'Wins Dir Level', desc: 'Replaces AGENTS.md in services/api/ and appends last.' },
+              { path: '/repo/services/api/src/db/AGENTS.md', status: 'NOT LOADED', badge: 'Below CWD', desc: 'Codex stops at CWD; subfolders below CWD are not scanned.' }
+            ]
+          },
+          agy: {
+            title: 'Antigravity CLI — Launch CWD: /repo/services/api',
+            ruleSummary: 'Walks UP from CWD to Repo Root + Global. Cumulative union (deduplicated). Never loads below CWD. 24 KB/file & 20k token budget.',
+            files: [
+              { path: '~/.gemini/{AGENTS,GEMINI}.md', status: 'ALWAYS ON', badge: 'Global Union', desc: 'Combined with ~/.gemini/config/{AGENTS,GEMINI}.md and rules/*.md.' },
+              { path: '/repo/{AGENTS,GEMINI}.md & .agents/rules/*.md', status: 'LOADED (Walk UP)', badge: 'Repo Root', desc: 'Loaded according to YAML trigger (always_on, model_decision, glob).' },
+              { path: '/repo/services/api/{AGENTS,GEMINI}.md', status: 'LOADED (CWD)', badge: 'Workspace Union', desc: 'Both AGENTS.md and GEMINI.md combine—never overwrite each other.' },
+              { path: '/repo/services/api/.agents/rules/no-yaml.md', status: 'DISCARDED', badge: 'No YAML trigger', desc: 'Files in rules/*.md without valid YAML trigger frontmatter are silently ignored.' },
+              { path: '/repo/services/api/src/db/AGENTS.md', status: 'NOT LOADED', badge: 'Below Workspace', desc: 'Antigravity never loads rules from subfolders below the workspace folder.' }
+            ]
+          }
+        }[activeSimCli];
+
+        container.innerHTML = `
+          <div class="lg:col-span-12 space-y-2.5 min-w-0">
+            <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+              <div class="text-xs font-bold text-[var(--foreground)]">${esc(simData.title)}</div>
+              <div class="text-xs text-[var(--muted-foreground)] mt-0.5 leading-relaxed">${esc(simData.ruleSummary)}</div>
+            </div>
+            <div class="space-y-2">
+              ${simData.files.map(f => `
+                <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                  <div class="space-y-1 min-w-0">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <code class="text-[11px] sm:text-xs font-bold text-[var(--code-foreground)] path-chip">${esc(f.path)}</code>
+                      <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">${esc(f.badge)}</span>
+                    </div>
+                    <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${esc(f.desc)}</p>
+                  </div>
+                  <div class="text-[11px] font-mono font-semibold shrink-0 px-2 py-1 rounded border border-[var(--card-border)] bg-[var(--card)] w-fit">
+                    ${esc(f.status)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (activeSimScenario === 'mcp') {
+        const mcpData = {
+          claude: {
+            leftTitle: 'User (~/.claude.json)',
+            leftCode: `{\n  "mcpServers": {\n    "github": { "command": "npx", "args": ["mcp-github"] },\n    "db": {\n      "command": "npx",\n      "args": ["mcp-pg"],\n      "env": { "PG_USER": "dev" }\n    }\n  }\n}`,
+            rightTitle: 'Project (<repo>/.mcp.json)',
+            rightCode: `{\n  "mcpServers": {\n    "db": {\n      "command": "npx",\n      "args": ["mcp-pg", "--readonly"],\n      "env": { "DATABASE_URL": "\${DB_URL}" }\n    },\n    "sentry": { "url": "https://mcp.sentry.dev/mcp" }\n  }\n}`,
+            resultTitle: 'Effective MCP Pool (Claude Code)',
+            resultCode: `// Distinct servers UNION; same key REPLACES entire block!\n- github  -> from User (~/.claude.json)\n- sentry  -> from Project (.mcp.json)\n- db      -> COMPLETELY REPLACED by Project (.mcp.json)\n             // PG_USER="dev" is NOT inherited (no deep-merge!)\n\n// Note: A "Local" entry for "db" inside ~/.claude.json\n// under this project path would beat .mcp.json.`
+          },
+          codex: {
+            leftTitle: 'Global (~/.codex/config.toml)',
+            leftCode: `[mcp_servers.github]\ncommand = "npx"\nargs = ["-y", "mcp-github"]\n\n[mcp_servers.db]\ncommand = "npx"\nargs = ["-y", "mcp-pg"]\nenv = { PG_USER = "dev" }`,
+            rightTitle: 'Trusted Project (.codex/config.toml)',
+            rightCode: `[mcp_servers.db]\ncommand = "npx"\nargs = ["-y", "mcp-pg", "--readonly"]\n\n[mcp_servers.linear]\nurl = "https://mcp.linear.app/mcp"\nbearer_token_env_var = "LINEAR_KEY"`,
+            resultTitle: 'Effective MCP Pool (Codex CLI)',
+            resultCode: `# Only applies if repo is marked TRUSTED:\n- github -> preserved from Global ~/.codex/config.toml\n- linear -> added from Project .codex/config.toml\n- db     -> ENTIRE [mcp_servers.db] table replaced by Project\n            # env.PG_USER is NOT merged from Global!\n\n# Untrusted repo? Project .codex/config.toml is ignored.`
+          },
+          agy: {
+            leftTitle: 'Global (~/.gemini/config/mcp_config.json)',
+            leftCode: `{\n  "mcpServers": {\n    "github": { "command": "npx", "args": ["mcp-github"] },\n    "db": {\n      "command": "npx",\n      "args": ["mcp-pg"]\n    }\n  }\n}`,
+            rightTitle: 'Workspace (<repo>/.agents/mcp_config.json)',
+            rightCode: `{\n  "mcpServers": {\n    "db": {\n      "serverUrl": "https://db-mcp.internal/mcp",\n      "disabledTools": ["drop_table"],\n      "timeoutSeconds": 600\n    }\n  }\n}`,
+            resultTitle: 'Effective MCP Pool (Antigravity CLI)',
+            resultCode: `// Union across Workspace + Global + Enabled Plugins:\n- github   -> active from Global (~/.gemini/config/)\n- db       -> Workspace (.agents/mcp_config.json) overrides Global\n              (Streamable HTTP via serverUrl; drop_table hidden)\n- plugins  -> active plugin MCP tools auto-namespaced\n\n// Inspect live status & logs anytime with /mcp`
+          }
+        }[activeSimCli];
+
+        container.innerHTML = `
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(mcpData.leftTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.leftCode)}</pre>
+          </div>
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(mcpData.rightTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.rightCode)}</pre>
+          </div>
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border-2 border-[var(--primary)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${esc(mcpData.resultTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(mcpData.resultCode)}</pre>
+          </div>
+        `;
+      } else if (activeSimScenario === 'skills') {
+        const skillLadder = {
+          claude: {
+            note: 'When multiple scopes define a skill named "deploy", Claude Code resolves in this order:',
+            steps: [
+              { rank: '1 (WINS)', scope: 'Project Skill', path: '<repo>/.claude/skills/deploy/SKILL.md', note: 'Shadows personal global skill of the same name.' },
+              { rank: '2', scope: 'Global User Skill', path: '~/.claude/skills/deploy/SKILL.md', note: 'Fallback across projects without their own deploy skill.' },
+              { rank: 'Namespaced', scope: 'Plugin Skill', path: 'plugin-name:deploy', note: 'Namespaced so it does not collide.' }
+            ]
+          },
+          codex: {
+            note: 'When multiple scopes define a skill named "deploy", Codex CLI resolves in this order:',
+            steps: [
+              { rank: '1 (WINS)', scope: 'Repo / CWD Skill', path: '<cwd-up-to-repo>/.agents/skills/deploy/SKILL.md', note: 'Project-local skill wins over user, admin, and system.' },
+              { rank: '2', scope: 'User Global Skill', path: '~/.agents/skills/deploy/ or ~/.codex/skills/deploy/', note: 'Personal fallback across repos.' },
+              { rank: '3', scope: 'Admin Skill', path: '/etc/codex/skills/deploy/SKILL.md', note: 'Machine-wide admin provisioned skill.' },
+              { rank: '4', scope: 'System Bundled', path: '<bundled-with-codex>', note: 'Lowest priority default skill.' }
+            ]
+          },
+          agy: {
+            note: 'Antigravity CLI resolves a duplicate skill named "deploy" via a 5-tier priority ladder:',
+            steps: [
+              { rank: '1 (WINS IN CLI!)', scope: 'CLI-Exclusive Global & Shared', path: '~/.gemini/antigravity-cli/skills/deploy/ & ~/.gemini/skills/deploy/', note: 'Beats even workspace skills and ignores manifest exclude lists!' },
+              { rank: '2', scope: 'Personal Folder in Shared Repo', path: '<repo>/people/{user}/.agents/skills/deploy/SKILL.md', note: 'Configured via .gemini/config.json ("personal_customization_dir").' },
+              { rank: '3', scope: 'Workspace & Project Manifests', path: '<cwd-up-to-repo>/.agents/skills/deploy/ (or skills.json)', note: 'Standard team workspace skill checked into VCS.' },
+              { rank: '4', scope: 'Personal Cross-Surface Global', path: '~/.gemini/config/skills/deploy/ (or global skills.json)', note: 'Shared across both Antigravity App and CLI.' },
+              { rank: '5', scope: 'Built-in Skills', path: '<antigravity-builtin>/skills/deploy/', note: 'Plugin skills use <plugin>:deploy and never collide.' }
+            ]
+          }
+        }[activeSimCli];
+
+        container.innerHTML = `
+          <div class="lg:col-span-12 space-y-2.5 min-w-0">
+            <p class="text-xs text-[var(--muted-foreground)]">${esc(skillLadder.note)}</p>
+            <div class="space-y-2">
+              ${skillLadder.steps.map((s, idx) => `
+                <div class="p-3 rounded-lg bg-[var(--background)] border ${idx === 0 ? 'border-2 border-[var(--primary)]' : 'border-[var(--card-border)]'} space-y-1 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded ${idx === 0 ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]'}">#${esc(s.rank)}</span>
+                    <span class="text-xs font-bold text-[var(--foreground)]">${esc(s.scope)}</span>
+                  </div>
+                  <code class="text-[11px] sm:text-xs text-[var(--code-foreground)] block path-chip">${esc(s.path)}</code>
+                  <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)]">${esc(s.note)}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (activeSimScenario === 'configs') {
+        const cfgData = {
+          claude: {
+            leftTitle: 'Global (~/.claude/settings.json)',
+            leftCode: `{\n  "model": "claude-opus-4-6",\n  "env": {\n    "AWS_REGION": "us-east-1",\n    "LOG_LEVEL": "info"\n  },\n  "permissions": {\n    "allow": ["Read", "Grep", "Bash(git status)"]\n  }\n}`,
+            rightTitle: 'Project (<repo>/.claude/settings.json)',
+            rightCode: `{\n  "model": "claude-sonnet-4-6",\n  "env": {\n    "LOG_LEVEL": "debug"\n  },\n  "permissions": {\n    "allow": ["Bash(npm test)"]\n  }\n}`,
+            resultTitle: 'Effective Config (Claude Code)',
+            resultCode: `{\n  "model": "claude-sonnet-4-6",   // Scalar: OVERWRITTEN\n  "env": {\n    "AWS_REGION": "us-east-1",    // Object: DEEP-MERGED\n    "LOG_LEVEL": "debug"          // Key overwritten\n  },\n  "permissions": {\n    "allow": ["Bash(npm test)"]   // Array: REPLACED! (Global lost!)\n  }\n}`
+          },
+          codex: {
+            leftTitle: 'Global (~/.codex/config.toml)',
+            leftCode: `model = "gpt-5-codex"\napproval_policy = "untrusted"\nproject_doc_max_bytes = 32768`,
+            rightTitle: 'Project (<repo>/.codex/config.toml)',
+            rightCode: `approval_policy = "on-request"\nproject_doc_max_bytes = 65536`,
+            resultTitle: 'Effective Config (Codex CLI)',
+            resultCode: `model = "gpt-5-codex"          # Inherited from Global\napproval_policy = "on-request" # Overwritten by Project\nproject_doc_max_bytes = 65536  # Overwritten by Project\n# (CLI flags -c beat both)`
+          },
+          agy: {
+            leftTitle: 'Global (~/.gemini/antigravity-cli/settings.json)',
+            leftCode: `{\n  "agentMode": "default",\n  "verbosity": "medium"\n}\n// + ~/.gemini/config/skills.json:\n// entries: ["/team/shared-skills"]`,
+            rightTitle: 'CLI Flag + Project Manifest',
+            rightCode: `// Launch: agy --mode auto\n// <repo>/.agents/skills.json:\n{\n  "entries": [{ "path": "tools/skills" }],\n  "exclude": ["legacy-deploy"]\n}`,
+            resultTitle: 'Effective Config (Antigravity CLI)',
+            resultCode: `// Runtime:\nagentMode = "auto"      // --mode flag overrides settings.json\nverbosity = "medium"    // from settings.json\n\n// Skill Discovery (Additive Union):\n- CLI-exclusive folders (ignore exclude!)\n- <repo>/.agents/skills + tools/skills\n- ~/.gemini/config/skills + /team/shared-skills\n  (all minus "legacy-deploy")`
+          }
+        }[activeSimCli];
+
+        container.innerHTML = `
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(cfgData.leftTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.leftCode)}</pre>
+          </div>
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--muted-foreground)] uppercase path-chip">${esc(cfgData.rightTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.rightCode)}</pre>
+          </div>
+          <div class="lg:col-span-4 p-3 rounded-lg bg-[var(--background)] border-2 border-[var(--primary)] space-y-1.5 min-w-0">
+            <div class="text-[11px] font-mono font-bold text-[var(--foreground)] uppercase path-chip">${esc(cfgData.resultTitle)}</div>
+            <pre class="text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(cfgData.resultCode)}</pre>
+          </div>
+        `;
+      }
+    }
+
+    // ==================== TAB 3: FILE TREE ====================
+    function setTreeCli(cli) {
+      activeTreeCli = cli;
+      ['all', 'claude', 'codex', 'agy'].forEach(c => {
+        const btn = document.getElementById('tree-cli-' + c);
+        btn.className = c === cli
+          ? 'px-2 py-1 rounded text-[11px] font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2 py-1 rounded text-[11px] font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
+      });
+      const visible = activeTreeCli === 'all' ? TREE_NODES : TREE_NODES.filter(n => n.cli === activeTreeCli);
+      if (!visible.some(n => n.id === selectedTreeNodeId) && visible.length > 0) {
+        selectedTreeNodeId = visible[0].id;
+      }
+      renderTree();
+    }
+
+    function selectTreeNode(id) {
+      selectedTreeNodeId = id;
+      renderTree();
+      if (window.innerWidth < 1024) {
+        const insp = document.getElementById('file-inspector');
+        if (insp) insp.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function renderTree() {
+      const listEl = document.getElementById('file-tree-list');
+      const inspectorEl = document.getElementById('file-inspector');
+      const visible = activeTreeCli === 'all' ? TREE_NODES : TREE_NODES.filter(n => n.cli === activeTreeCli);
+      const cliLabel = { claude: 'CLAUDE', codex: 'CODEX', agy: 'AGY' };
+
+      listEl.innerHTML = visible.map(node => {
+        const isSelected = node.id === selectedTreeNodeId;
+        return `
+          <button onclick="selectTreeNode('${node.id}')" class="w-full text-left p-2.5 rounded-lg border transition-colors min-w-0 ${isSelected ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]' : 'bg-[var(--background)] text-[var(--foreground)] border-[var(--card-border)] hover:border-[var(--border)]'}">
+            <div class="flex items-center justify-between gap-2 min-w-0">
+              <span class="text-[11px] sm:text-xs font-mono font-bold truncate">${esc(node.path)}</span>
+              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded shrink-0 ${isSelected ? 'bg-[var(--background)]/20 text-[var(--primary-foreground)]' : 'bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]'}">${cliLabel[node.cli]}</span>
+            </div>
+            <div class="text-[11px] mt-0.5 truncate ${isSelected ? 'text-[var(--primary-foreground)]/80' : 'text-[var(--muted-foreground)]'}">${esc(node.type)} &bull; ${esc(node.scope)}</div>
+          </button>
+        `;
+      }).join('');
+
+      const activeNode = TREE_NODES.find(n => n.id === selectedTreeNodeId) || visible[0];
+      if (!activeNode) return;
+
+      inspectorEl.innerHTML = `
+        <div class="space-y-3.5 min-w-0">
+          <div class="border-b border-[var(--card-border)] pb-3">
+            <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+              <span class="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)] uppercase">${esc(activeNode.cli)}</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${esc(activeNode.scope)}</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)]">${esc(activeNode.git)}</span>
+            </div>
+            <h3 class="text-xs sm:text-sm font-mono font-bold text-[var(--code-foreground)] path-chip">${esc(activeNode.path)}</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] min-w-0">
+              <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Artifact Type</div>
+              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${esc(activeNode.type)}</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-[var(--background)] border border-[var(--card-border)] min-w-0">
+              <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Overwrite / Merge Rule</div>
+              <div class="text-xs font-semibold text-[var(--foreground)] mt-0.5">${esc(activeNode.behavior)}</div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)]">
+            <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)] mb-1">How It Works</div>
+            <p class="text-xs text-[var(--foreground)] leading-relaxed">${esc(activeNode.summary)}</p>
+          </div>
+
+          <div class="space-y-1 min-w-0">
+            <div class="text-[10px] font-mono font-bold uppercase text-[var(--muted-foreground)]">Example Contents</div>
+            <pre class="p-3 rounded-lg bg-[var(--background)] border border-[var(--card-border)] text-[11px] sm:text-xs text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${esc(activeNode.code)}</pre>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==================== INITIALIZE ====================
+    initThemeSwitcherUI();
+    renderMatrix();
+    renderSimulator();
+    renderTree();
+  </script>
+</body>
+</html>
