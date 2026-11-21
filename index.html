@@ -91,16 +91,10 @@
     <header class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3.5 sm:p-5">
       <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4 min-w-0">
         <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+          <div class="flex flex-wrap items-center justify-between sm:justify-start gap-2 mb-2">
             <span class="inline-flex items-center text-[10px] sm:text-[11px] font-mono font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--secondary)] text-[var(--secondary-foreground)] border border-[var(--card-border)]">
               CLI + Desktop App
             </span>
-            <!-- OS Switcher (macOS default) -->
-            <div class="inline-flex items-center gap-0.5 text-[10px] sm:text-[11px] font-mono bg-[var(--background)] border border-[var(--card-border)] rounded-md p-0.5" role="group" aria-label="Operating System">
-              <button onclick="setOS('macos')" id="os-btn-macos" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">macOS</button>
-              <button onclick="setOS('windows')" id="os-btn-windows" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Windows</button>
-              <button onclick="setOS('linux')" id="os-btn-linux" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Linux</button>
-            </div>
             <!-- Standalone Browser Theme Switcher (auto-hidden inside Antigravity host) -->
             <div id="standalone-theme-switcher" class="hidden items-center gap-0.5 text-[10px] sm:text-[11px] font-mono bg-[var(--background)] border border-[var(--card-border)] rounded-md p-0.5">
               <button onclick="applyStandaloneTheme('wireframe')" id="theme-btn-wireframe" class="px-1.5 sm:px-2 py-0.5 rounded transition-colors">Wireframe</button>
@@ -181,14 +175,22 @@
     <section id="tab-matrix" class="w-full min-w-0 space-y-3 sm:space-y-4">
       <!-- Compact Filter Bar -->
       <div class="w-full min-w-0 bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 space-y-2.5">
-        <!-- Row 1: Pillar Pills (wrap cleanly on mobile so all 4 pillars stay visible) -->
-        <div class="flex flex-wrap items-center gap-1.5">
-          <span class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] mr-0.5">Pillar:</span>
-          <button onclick="setMatrixPillar('all')" id="pillar-all" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">All (4)</button>
-          <button onclick="setMatrixPillar('instructions')" id="pillar-instructions" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">1. Instructions</button>
-          <button onclick="setMatrixPillar('mcp')" id="pillar-mcp" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">2. MCP</button>
-          <button onclick="setMatrixPillar('skills')" id="pillar-skills" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">3. Skills</button>
-          <button onclick="setMatrixPillar('configs')" id="pillar-configs" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">4. Configs</button>
+        <!-- Row 1: Pillar Pills + OS Switcher -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] mr-0.5">Pillar:</span>
+            <button onclick="setMatrixPillar('all')" id="pillar-all" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">All (4)</button>
+            <button onclick="setMatrixPillar('instructions')" id="pillar-instructions" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">1. Instructions</button>
+            <button onclick="setMatrixPillar('mcp')" id="pillar-mcp" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">2. MCP</button>
+            <button onclick="setMatrixPillar('skills')" id="pillar-skills" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">3. Skills</button>
+            <button onclick="setMatrixPillar('configs')" id="pillar-configs" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">4. Configs</button>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-[var(--card-border)]" role="group" aria-label="Operating System">
+            <span class="text-[11px] font-mono font-semibold uppercase text-[var(--muted-foreground)] mr-0.5">OS:</span>
+            <button onclick="setOS('macos')" id="os-btn-macos" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]">macOS</button>
+            <button onclick="setOS('windows')" id="os-btn-windows" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Windows</button>
+            <button onclick="setOS('linux')" id="os-btn-linux" class="px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--card-border)]">Linux</button>
+          </div>
         </div>
 
         <!-- Row 2: Ecosystem Focus + Scope Dropdown + App Delta Filter -->
@@ -899,8 +901,8 @@
         const btn = document.getElementById('os-btn-' + o);
         if (!btn) return;
         btn.className = o === activeOS
-          ? 'px-1.5 sm:px-2 py-0.5 rounded transition-colors bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
-          : 'px-1.5 sm:px-2 py-0.5 rounded transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
+          ? 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)]'
+          : 'px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-[var(--card-border)]';
       });
       renderMatrix();
       renderSimulator();
