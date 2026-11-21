@@ -459,7 +459,12 @@
             agy: {
               badge: 'Cumulative Union + 24 KB/file + 20k Token Demotion',
               paths: ['Global + Repo-to-Workspace AGENTS/GEMINI.md + .agents/rules/*.md (Deduplicated)'],
-              detail: 'Identical in App & CLI. Never overwrites; excess >20k tokens demotes largest rules to path+description pointers.'
+              detail: 'Identical in App & CLI. Never overwrites; excess >20k tokens demotes largest rules to path+description pointers.',
+              example: {
+                title: 'Example: "APPENDS ALL (deduplicated union)"',
+                code: `~/.gemini/AGENTS.md       -> "Use npm"               [LOADED]\n~/.gemini/GEMINI.md       -> symlink -> AGENTS.md     [DEDUPLICATED: 1x]\n<repo>/AGENTS.md          -> "Use pnpm"              [LOADED - appends]\n<repo>/GEMINI.md          -> "No edits in migrations"[LOADED - appends]\n<repo>/.agents/rules/api.md (+ listed in rules.json) [DEDUPLICATED: 1x]`,
+                note: 'All 4 distinct files load together (GEMINI.md never replaces AGENTS.md). Symlinks or double-matched rules.json paths resolve to canonical paths and inject once. If ~/.gemini/AGENTS.md ("Use npm") conflicts with <repo>/AGENTS.md ("Use pnpm"), both appear in context and the model reconciles toward the more specific repo rule.'
+              }
             }
           }
         ]
@@ -1003,12 +1008,22 @@
       const extraHtml = data.extraInfo
         ? `<div class="mt-1.5 px-2 py-1.5 rounded-md border border-[var(--card-border)] bg-[var(--secondary)] text-[11px] leading-snug text-[var(--muted-foreground)]"><span class="font-mono font-semibold uppercase text-[10px] text-[var(--foreground)] mr-1">Desktop Extra:</span>${escLoc(data.extraInfo)}</div>`
         : '';
+      const exampleHtml = data.example
+        ? `<details class="mt-2 rounded-md border border-[var(--card-border)] bg-[var(--card)] text-[11px]">
+            <summary class="cursor-pointer select-none px-2 py-1.5 font-mono font-semibold text-[var(--foreground)]">${escLoc(data.example.title)}</summary>
+            <div class="px-2 pb-2 pt-1 space-y-1.5 border-t border-[var(--card-border)]">
+              <pre class="p-2 rounded bg-[var(--background)] border border-[var(--card-border)] text-[10px] sm:text-[11px] text-[var(--code-foreground)] overflow-x-auto leading-relaxed">${escLoc(data.example.code)}</pre>
+              <p class="text-[11px] text-[var(--muted-foreground)] leading-relaxed">${escLoc(data.example.note)}</p>
+            </div>
+          </details>`
+        : '';
       return `
         <div class="space-y-1.5 min-w-0">
           ${badgeHtml}
           <ul class="space-y-1">${pathsHtml}</ul>
           ${multiRuleHtml}
           <p class="text-[11px] sm:text-xs text-[var(--muted-foreground)] leading-relaxed pt-0.5">${escLoc(data.detail)}</p>
+          ${exampleHtml}
           ${deltaHtml}
           ${extraHtml}
         </div>
@@ -1132,12 +1147,13 @@
             ]
           },
           agy: {
-            title: 'Antigravity CLI — Launch CWD: /repo/services/api',
-            ruleSummary: 'Walks UP from CWD to Repo Root + Global. Cumulative union (deduplicated). Never loads below CWD. 24 KB/file & 20k token budget.',
+            title: 'Antigravity — Launch CWD: /repo/services/api',
+            ruleSummary: 'Walks UP from CWD to Repo Root + Global. APPENDS ALL distinct files (deduplicated by canonical path—never overwrites). Never loads below CWD. 24 KB/file & 20k token budget.',
             files: [
-              { path: '~/.gemini/{AGENTS,GEMINI}.md', status: 'ALWAYS ON', badge: 'Global Union', desc: 'Combined with ~/.gemini/config/{AGENTS,GEMINI}.md and rules/*.md.' },
-              { path: '/repo/{AGENTS,GEMINI}.md & .agents/rules/*.md', status: 'LOADED (Walk UP)', badge: 'Repo Root', desc: 'Loaded according to YAML trigger (always_on, model_decision, glob).' },
-              { path: '/repo/services/api/{AGENTS,GEMINI}.md', status: 'LOADED (CWD)', badge: 'Workspace Union', desc: 'Both AGENTS.md and GEMINI.md combine—never overwrite each other.' },
+              { path: '~/.gemini/AGENTS.md', status: 'LOADED (Always On)', badge: 'Global Append', desc: 'Always active; combined with ~/.gemini/config/{AGENTS,GEMINI}.md and valid rules/*.md.' },
+              { path: '~/.gemini/GEMINI.md -> symlink to AGENTS.md', status: 'DEDUPLICATED (1x)', badge: 'Canonical Path', desc: 'Resolves to the same canonical file as ~/.gemini/AGENTS.md, so it is injected only once (no duplicate tokens).' },
+              { path: '/repo/AGENTS.md + /repo/GEMINI.md', status: 'BOTH LOADED (Walk UP)', badge: 'Never Overwrites', desc: 'Both files append into context. If a repo rule contradicts a global rule, both appear and the model reconciles toward the repo rule.' },
+              { path: '/repo/.agents/rules/api.md (also listed in rules.json)', status: 'DEDUPLICATED (1x)', badge: 'Canonical Path', desc: 'Even when discovered via both .agents/rules/ scan and rules.json, it is only injected once.' },
               { path: '/repo/services/api/.agents/rules/no-yaml.md', status: 'DISCARDED', badge: 'No YAML trigger', desc: 'Files in rules/*.md without valid YAML trigger frontmatter are silently ignored.' },
               { path: '/repo/services/api/src/db/AGENTS.md', status: 'NOT LOADED', badge: 'Below Workspace', desc: 'Antigravity never loads rules from subfolders below the workspace folder.' }
             ]
